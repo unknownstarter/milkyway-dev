@@ -7,6 +7,7 @@ import '../screens/book_detail_screen.dart';
 import '../../domain/models/naver_book.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class BookSearchScreen extends ConsumerStatefulWidget {
   const BookSearchScreen({super.key});
@@ -197,15 +198,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
           await ref
               .read(analyticsProvider)
               .logBookRegistered(registeredBook.id, registeredBook.title);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookDetailScreen(
-                bookId: registeredBook.id,
-                isFromRegistration: true,
-              ),
-            ),
-          );
+          context.go('/books/${registeredBook.id}');
         }
       } catch (e) {
         if (context.mounted) {

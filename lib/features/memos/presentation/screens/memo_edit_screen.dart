@@ -105,7 +105,9 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
         final androidInfo =
             Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
         final permission = source == ImageSource.camera
-            ? await Permission.camera.request()
+            ? Platform.isAndroid
+                ? await Permission.camera.request()
+                : PermissionStatus.granted // iOS는 ImagePicker가 자동으로 처리
             : (androidInfo?.version.sdkInt ?? 0) >= 33
                 ? await Permission.photos.request()
                 : await Permission.storage.request();
@@ -114,11 +116,13 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('이미지를 선택하려면 권한이 필요합니다'),
-                action: SnackBarAction(
-                  label: '설정',
-                  onPressed: () => openAppSettings(),
-                ),
+                content: const Text('이미지를 선택하려면 권한이 필요합니다'),
+                action: Platform.isAndroid
+                    ? const SnackBarAction(
+                        label: '설정',
+                        onPressed: openAppSettings,
+                      )
+                    : null,
               ),
             );
           }

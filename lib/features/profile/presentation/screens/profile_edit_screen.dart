@@ -4,6 +4,8 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:go_router/go_router.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key});
@@ -250,27 +252,78 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   Future<void> _selectImage() async {
     try {
       final picker = ImagePicker();
-      print('이미지 선택 시작');
-
-      final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800, // 이미지 크기 최적화
-        imageQuality: 80, // 이미지 품질 최적화
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.black,
+          title: const Text('이미지 선택', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.white),
+                title: const Text('갤러리에서 선택',
+                    style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.white),
+                title: const Text('카메라로 촬영',
+                    style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
       );
 
-      print('선택된 이미지: ${pickedFile?.path}');
+      if (source != null) {
+        // 권한 체크
+        final androidInfo =
+            Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
+        final permission = source == ImageSource.camera
+            ? Platform.isAndroid
+                ? await Permission.camera.request()
+                : PermissionStatus.granted // iOS는 ImagePicker가 자동으로 처리
+            : (androidInfo?.version.sdkInt ?? 0) >= 33
+                ? await Permission.photos.request()
+                : await Permission.storage.request();
 
-      if (pickedFile != null) {
-        setState(() {
-          _selectedImagePath = pickedFile.path;
-        });
-        print('이미지 경로 설정: $_selectedImagePath');
+        if (!permission.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('이미지를 선택하려면 권한이 필요합니다'),
+                action: Platform.isAndroid
+                    ? const SnackBarAction(
+                        label: '설정',
+                        onPressed: openAppSettings,
+                      )
+                    : null,
+              ),
+            );
+          }
+          return;
+        }
+
+        final pickedFile = await picker.pickImage(
+          source: source,
+          maxWidth: 800,
+          imageQuality: 80,
+        );
+
+        if (pickedFile != null) {
+          setState(() {
+            _selectedImagePath = pickedFile.path;
+          });
+        }
       }
     } catch (e) {
-      print('이미지 선택 에러: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다: $e')),
+        );
+      }
     }
   }
 

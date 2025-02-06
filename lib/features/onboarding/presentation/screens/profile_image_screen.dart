@@ -55,66 +55,82 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen>
   }
 
   Future<void> _pickImage() async {
-    if (Platform.isIOS) {
-      // iOS에서는 ImagePicker가 자동으로 권한 요청을 처리
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    try {
+      final picker = ImagePicker();
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF2A2A2A),
+          title: const Text(
+            '이미지 선택',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            '이미지를 선택하는 방법을 선택해주세요.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, ImageSource.gallery),
+              child: const Text('갤러리'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, ImageSource.camera),
+              child: const Text('카메라'),
+            ),
+          ],
+        ),
+      );
 
-      if (image != null) {
-        setState(() {
-          _selectedImagePath = image.path;
-        });
-      }
-    } else {
-      // Android는 기존 코드 유지
-      PermissionStatus status = await Permission.storage.request();
+      if (source != null) {
+        // 권한 체크
+        final androidInfo =
+            Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
+        final permission = source == ImageSource.camera
+            ? Platform.isAndroid
+                ? await Permission.camera.request()
+                : PermissionStatus.granted // iOS는 ImagePicker가 자동으로 처리
+            : (androidInfo?.version.sdkInt ?? 0) >= 33
+                ? await Permission.photos.request()
+                : await Permission.storage.request();
 
-      if (status.isGranted) {
-        final ImagePicker picker = ImagePicker();
-        final XFile? image =
-            await picker.pickImage(source: ImageSource.gallery);
+        if (!permission.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('이미지를 선택하려면 권한이 필요합니다'),
+                action: Platform.isAndroid
+                    ? const SnackBarAction(
+                        label: '설정',
+                        onPressed: openAppSettings,
+                      )
+                    : null,
+              ),
+            );
+          }
+          return;
+        }
 
-        if (image != null) {
+        final pickedFile = await picker.pickImage(
+          source: source,
+          maxWidth: 800,
+          imageQuality: 80,
+        );
+
+        if (pickedFile != null) {
           setState(() {
-            _selectedImagePath = image.path;
+            _selectedImagePath = pickedFile.path;
           });
         }
-      } else if (status.isPermanentlyDenied) {
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: const Color(0xFF2A2A2A),
-              title: const Text(
-                '권한 필요',
-                style: TextStyle(color: Colors.white),
-              ),
-              content: const Text(
-                '갤러리 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
-                style: TextStyle(color: Colors.white70),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('취소'),
-                ),
-                TextButton(
-                  onPressed: () => openAppSettings(),
-                  child: const Text('설정으로 이동'),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('갤러리 접근 권한이 거부되었습니다.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

@@ -31,22 +31,6 @@ class ProfileScreen extends ConsumerWidget {
         centerTitle: true,
         automaticallyImplyLeading: false,
         backgroundColor: Colors.black,
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfileEditScreen(),
-                ),
-              );
-            },
-            child: const Text(
-              '수정',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

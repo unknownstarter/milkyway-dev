@@ -92,7 +92,9 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
         final androidInfo =
             Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
         final permission = source == ImageSource.camera
-            ? await Permission.camera.request()
+            ? Platform.isAndroid
+                ? await Permission.camera.request()
+                : PermissionStatus.granted // iOS는 ImagePicker가 자동으로 처리
             : (androidInfo?.version.sdkInt ?? 0) >= 33
                 ? await Permission.photos.request()
                 : await Permission.storage.request();
@@ -100,12 +102,14 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
         if (!permission.isGranted) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('이미지를 선택하려면 권한이 필요합니다'),
-                action: SnackBarAction(
-                  label: '설정',
-                  onPressed: openAppSettings,
-                ),
+              SnackBar(
+                content: const Text('이미지를 선택하려면 권한이 필요합니다'),
+                action: Platform.isAndroid
+                    ? const SnackBarAction(
+                        label: '설정',
+                        onPressed: openAppSettings,
+                      )
+                    : null,
               ),
             );
           }
@@ -404,13 +408,14 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
         ref.invalidate(recentBooksProvider);
 
         // 선택된 책의 상세 페이지로 이동
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
             builder: (context) => BookDetailScreen(
               bookId: _selectedBookId!,
             ),
           ),
+          (route) => route.isFirst, // 첫 번째 스크린(홈)만 남기고 나머지는 제거
         );
 
         if (widget.onComplete != null) {

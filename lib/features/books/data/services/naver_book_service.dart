@@ -16,7 +16,11 @@ class NaverBookService {
         data: {'query': query},
       );
 
-      final List<dynamic> items = response.data['items'];
+      final List<dynamic> items = response.data['items'] ?? [];
+      if (items.isEmpty) {
+        return [];
+      }
+
       return items.map((item) => NaverBook.fromJson(item)).toList();
     } catch (e) {
       throw Exception('Failed to search books: $e');
