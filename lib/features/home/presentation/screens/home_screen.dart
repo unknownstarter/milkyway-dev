@@ -90,11 +90,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: Stack(
         children: [
           // 별이 있는 배경
-          CustomPaint(
-            painter: StarBackgroundPainter(numberOfStars: 150),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
+          Positioned.fill(
+            child: CustomPaint(
+              painter: StarBackgroundPainter(numberOfStars: 150),
             ),
           ),
           // 기존 content
@@ -214,7 +212,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // 모달 닫기
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -287,6 +285,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           currentIndex: 0,
           onTap: (index) {
             switch (index) {
+              case 0:
+                ref.read(analyticsProvider).logButtonClick(
+                      'nav_home',
+                      'home_screen',
+                    );
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HomeScreen(),
+                  ),
+                  (route) => false,
+                );
+                break;
               case 1:
                 ref.read(analyticsProvider).logButtonClick(
                       'nav_bookshelf',
