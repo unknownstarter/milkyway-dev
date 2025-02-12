@@ -14,7 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "394691029555-pgoc5migv2lqo5d3d76gfoksuuh7paai.apps.googleusercontent.com",
+          "client_id": "394691029555-j9qgm3qiurmbdm8nfc2t53a6pm209v7e.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.whatif.milkyway.android",
@@ -22,8 +22,12 @@
           }
         },
         {
-          "client_id": "394691029555-98k9mp6pt0fas3vktvqiaei4k45df2du.apps.googleusercontent.com",
-          "client_type": 3
+          "client_id": "394691029555-pgoc5migv2lqo5d3d76gfoksuuh7paai.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whatif.milkyway.android",
+            "certificate_hash": "76f96181986503cdb8d4e88ef2c2288069b2ecf0"
+          }
         }
       ],
       "api_key": [

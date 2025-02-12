@@ -20,11 +20,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   })  : _analytics = analytics,
         _googleSignIn = googleSignIn ??
             GoogleSignIn(
-                scopes: ['email', 'profile'],
-                clientId: Platform.isIOS
-                    ? '394691029555-cbbjdf7io2tec9004t3b31ons9r0a2g3.apps.googleusercontent.com' // iOS
-                    : null // Android는 google-services.json에서 자동으로 가져옴
-                ),
+              scopes: ['email', 'profile'],
+              // Android는 google-services.json을 사용
+              clientId: Platform.isIOS
+                  ? '394691029555-cbbjdf7io2tec9004t3b31ons9r0a2g3.apps.googleusercontent.com'
+                  : null,
+            ),
         _supabase = supabase ?? Supabase.instance.client;
 
   String _sha256ofString(String input) {
@@ -188,6 +189,26 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (e) {
       print('❌ Apple 로그인 실패: ${e.toString()}');
       throw Exception('Apple 로그인 실패: $e');
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    try {
+      final userId = _supabase.auth.currentUser!.id;
+
+      // Edge Function 호출
+      await _supabase.functions.invoke(
+        'delete-user',
+        body: {'user_id': userId},
+      );
+
+      // 로컬 로그아웃
+      final googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
+      await _supabase.auth.signOut();
+    } catch (e) {
+      print('❌ 계정 삭제 중 오류가 발생했습니다: $e');
+      throw Exception('계정 삭제 중 오류가 발생했습니다.');
     }
   }
 }

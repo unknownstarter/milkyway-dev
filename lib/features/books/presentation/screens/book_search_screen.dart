@@ -5,9 +5,7 @@ import '../providers/book_search_provider.dart';
 import '../providers/book_register_provider.dart';
 import '../screens/book_detail_screen.dart';
 import '../../domain/models/naver_book.dart';
-import '../../../home/presentation/screens/home_screen.dart';
 import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
-import 'package:go_router/go_router.dart';
 
 class BookSearchScreen extends ConsumerStatefulWidget {
   const BookSearchScreen({super.key});
@@ -75,13 +73,13 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
             textColor: Colors.black,
             backgroundColor: Color(0xFF00FF62),
             onPressed: () {
-              Navigator.pushReplacement(
+              Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BookDetailScreen(
-                    bookId: existingBook.id,
-                  ),
+                  builder: (context) =>
+                      BookDetailScreen(bookId: existingBook.id),
                 ),
+                (route) => route.isFirst,
               );
             },
           ),
@@ -198,7 +196,13 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
           await ref
               .read(analyticsProvider)
               .logBookRegistered(registeredBook.id, registeredBook.title);
-          context.go('/books/${registeredBook.id}');
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookDetailScreen(bookId: registeredBook.id),
+            ),
+            (route) => route.isFirst,
+          );
         }
       } catch (e) {
         if (context.mounted) {
@@ -236,10 +240,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomeScreen()),
-              );
+              Navigator.pop(context);
             },
           ),
         ),

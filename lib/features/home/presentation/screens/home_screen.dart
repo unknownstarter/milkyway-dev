@@ -18,7 +18,12 @@ import '../../../memos/presentation/providers/memo_provider.dart';
 import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
+  final bool autoNavigateToBookSearch;
+
+  const HomeScreen({
+    super.key,
+    this.autoNavigateToBookSearch = false,
+  });
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -28,8 +33,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuthAndLoadData();
+    _initializeHome();
     ref.read(analyticsProvider).logScreenView('home_screen');
+  }
+
+  Future<void> _initializeHome() async {
+    // 먼저 인증과 데이터 로드를 완료
+    await _checkAuthAndLoadData();
+
+    // 인증이 완료된 후에만 자동 이동 실행
+    if (widget.autoNavigateToBookSearch && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const BookSearchScreen(),
+        ),
+      );
+    }
   }
 
   Future<void> _checkAuthAndLoadData() async {
