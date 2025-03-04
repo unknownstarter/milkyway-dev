@@ -159,8 +159,27 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
     setState(() => _isLoading = true);
     try {
       String? imageUrl;
-      if (_selectedImagePath != null) {
-        // 이미지가 선택되었다면 업로드
+      if (_selectedImagePath == 'remove') {
+        // 이미지 삭제를 선택한 경우
+        imageUrl = null;
+
+        // 기존 이미지가 있다면 삭제
+        if (widget.memo.imageUrl != null) {
+          try {
+            final oldFileName = widget.memo.imageUrl!.split('/').last;
+            await ref
+                .read(supabaseClientProvider)
+                .storage
+                .from('memo_images')
+                .remove([
+              '${ref.read(supabaseClientProvider).auth.currentUser!.id}/$oldFileName'
+            ]);
+          } catch (e) {
+            print('기존 이미지 삭제 실패: $e');
+          }
+        }
+      } else if (_selectedImagePath != null) {
+        // 새 이미지를 선택한 경우
         final file = File(_selectedImagePath!);
         final fileName =
             '${ref.read(supabaseClientProvider).auth.currentUser!.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -193,7 +212,10 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
             .read(supabaseClientProvider)
             .storage
             .from('memo_images')
-            .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1년 유효한 서명된 URL 생성
+            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+      } else {
+        // 이미지를 수정하지 않은 경우 기존 이미지 URL 유지
+        imageUrl = widget.memo.imageUrl;
       }
 
       await ref.read(updateMemoProvider(
@@ -202,7 +224,7 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
           content: _contentController.text,
           page: int.tryParse(_pageController.text),
           bookId: widget.memo.bookId,
-          imageUrl: _selectedImagePath == 'remove' ? null : imageUrl,
+          imageUrl: imageUrl,
         ),
       ).future);
 

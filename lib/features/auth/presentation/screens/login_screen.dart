@@ -94,7 +94,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       if (next.hasValue && next.value != null) {
         final onboardingCompleted =
             await ref.read(authProvider.notifier).checkOnboardingStatus();
-
         if (context.mounted) {
           if (onboardingCompleted) {
             context.go('/home');
