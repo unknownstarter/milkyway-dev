@@ -21,10 +21,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         _googleSignIn = googleSignIn ??
             GoogleSignIn(
               scopes: ['email', 'profile'],
-              // Android는 google-services.json을 사용
               clientId: Platform.isIOS
                   ? '394691029555-cbbjdf7io2tec9004t3b31ons9r0a2g3.apps.googleusercontent.com'
-                  : null,
+                  : '394691029555-98k9mp6pt0fas3vktvqiaei4k45df2du.apps.googleusercontent.com',
             ),
         _supabase = supabase ?? Supabase.instance.client;
 
@@ -51,7 +50,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
         accessToken: googleAuth.accessToken,
-        nonce: null,
       );
       print('3. Supabase 응답: ${res.user?.toJson()}');
 
