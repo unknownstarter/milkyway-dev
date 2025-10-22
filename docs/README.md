@@ -84,6 +84,29 @@ lib/
     └── home/              # 홈 화면
 ```
 
+## 🚨 **중요: 레포지토리 관리**
+
+### 📁 **레포지토리 구조**
+```
+unknownstarter/
+├── milkyway/           # 🏭 프로덕션 레포지토리 (원래)
+└── milkyway-dev/       # 🛠️ 개발 레포지토리 (새로 생성)
+```
+
+### 🎯 **현재 작업 레포지토리**
+```bash
+# ⚠️ 중요: 항상 이 레포지토리에서 작업
+git clone https://github.com/unknownstarter/milkyway-dev.git
+cd milkyway-dev
+```
+
+### ⚠️ **주의사항**
+- **절대 `milkyway` 레포지토리에서 직접 개발 금지**
+- **모든 개발 작업은 `milkyway-dev`에서만 진행**
+- **완성 후에만 `milkyway`로 병합**
+
+---
+
 ## 🚀 시작하기
 
 ### 필수 요구사항
@@ -93,9 +116,9 @@ lib/
 
 ### 설치 및 실행
 ```bash
-# 저장소 클론
-git clone [repository-url]
-cd milkyway
+# ⚠️ 중요: 개발용 레포지토리 클론
+git clone https://github.com/unknownstarter/milkyway-dev.git
+cd milkyway-dev
 
 # 의존성 설치
 flutter pub get
