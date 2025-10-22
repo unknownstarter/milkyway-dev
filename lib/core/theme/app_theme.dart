@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+/// Milkyway 앱의 기본 Material Theme
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
-      textTheme: GoogleFonts.notoSansTextTheme(
-        Typography.material2021().black,
-      ),
+      useMaterial3: true,
+      brightness: Brightness.light,
     );
   }
 
   static ThemeData get darkTheme {
-    return ThemeData.dark().copyWith(
-      textTheme: GoogleFonts.notoSansTextTheme(
-        Typography.material2021().white,
-      ),
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
     );
   }
 }

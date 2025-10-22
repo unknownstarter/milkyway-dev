@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:developer';
 import '../../../home/domain/models/book.dart';
 import '../../../home/data/repositories/book_repository.dart';
 import '../../../home/presentation/providers/book_provider.dart';
@@ -30,7 +31,7 @@ class BookDetailController extends StateNotifier<AsyncValue<Book>> {
       await _repository.updateBookStatus(bookId, status);
       await loadBook();
     } catch (e) {
-      print('Error updating status: $e');
+      log('Error updating status: $e');
     }
   }
 }

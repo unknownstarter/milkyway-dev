@@ -9,6 +9,7 @@ class Book {
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String isbn;
 
   Book({
     required this.id,
@@ -21,6 +22,7 @@ class Book {
     this.status = '읽고 싶은',
     required this.createdAt,
     required this.updatedAt,
+    required this.isbn,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,7 @@ class Book {
           json['created_at'] ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(
           json['updated_at'] ?? DateTime.now().toIso8601String()),
+      isbn: json['isbn'] ?? '',
     );
   }
 }

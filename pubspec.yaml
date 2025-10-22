@@ -133,7 +133,7 @@ flutter:
   assets:
     - .env
     - assets/images/
-    - assets/icons/
+    # - assets/icons/
     - assets/fonts/PaytoneOne-Regular.ttf
     - assets/images/logo.png
     - assets/images/logo_horizontal.png

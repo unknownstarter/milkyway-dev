@@ -10,7 +10,7 @@ class StarBackgroundPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final random = Random();
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
+      ..color = Colors.white.withAlpha(77)
       ..style = PaintingStyle.fill;
 
     for (var i = 0; i < numberOfStars; i++) {
@@ -19,7 +19,7 @@ class StarBackgroundPainter extends CustomPainter {
       final starSize = random.nextDouble() * 2 + 1; // 1-3px 크기의 별
 
       // 랜덤하게 별의 투명도 조절
-      paint.color = Colors.white.withOpacity(random.nextDouble() * 0.3 + 0.1);
+      paint.color = Colors.white.withAlpha(((random.nextDouble() * 0.3 + 0.1) * 255).toInt());
 
       canvas.drawCircle(Offset(x, y), starSize / 2, paint);
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/memo.dart';
-import '../screens/memo_detail_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'dart:developer';
 
 class MemoCard extends StatelessWidget {
   final Memo memo;
@@ -14,12 +15,7 @@ class MemoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MemoDetailScreen(memo: memo),
-          ),
-        );
+        context.go('/memos/detail/${memo.id}');
       },
       child: Card(
         elevation: 0,
@@ -126,7 +122,7 @@ class MemoCard extends StatelessWidget {
                   memo.imageUrl!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    print('Image load error: $error');
+                    log('Image load error: $error');
                     return const SizedBox();
                   },
                 ),

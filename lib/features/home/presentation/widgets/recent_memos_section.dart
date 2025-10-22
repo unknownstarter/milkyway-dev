@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../memos/presentation/providers/memo_provider.dart';
 import '../../../memos/presentation/widgets/memo_card.dart';
 import '../providers/selected_book_provider.dart';
@@ -38,15 +39,7 @@ class RecentMemosSection extends ConsumerWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BookDetailScreen(
-                            bookId: selectedBookId,
-                            isFromRegistration: false,
-                          ),
-                        ),
-                      );
+                      context.push('/books/$selectedBookId');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF48FF00),

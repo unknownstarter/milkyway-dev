@@ -4,7 +4,7 @@ import 'package:whatif_milkyway_app/core/presentation/widgets/star_background_sc
 import 'package:whatif_milkyway_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:whatif_milkyway_app/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
-import 'package:whatif_milkyway_app/features/home/presentation/screens/home_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class BookIntroScreen extends ConsumerWidget {
   const BookIntroScreen({super.key});
@@ -111,13 +111,7 @@ class BookIntroScreen extends ConsumerWidget {
 
                     // 홈 화면으로 이동하면서 자동 책 검색 플래그 설정
                     if (context.mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const HomeScreen(autoNavigateToBookSearch: true),
-                        ),
-                      );
+                      context.go('/home?autoBookSearch=true');
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -156,7 +150,7 @@ class BookIntroScreen extends ConsumerWidget {
               radius: 0.5,
               colors: [
                 Colors.white,
-                Colors.white.withOpacity(0),
+                Colors.white.withAlpha(0),
               ],
               stops: const [0.7, 1.0],
             ).createShader(bounds);

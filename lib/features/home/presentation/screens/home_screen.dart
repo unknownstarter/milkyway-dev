@@ -1,378 +1,581 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../books/presentation/screens/book_search_screen.dart';
-import '../../../books/presentation/screens/book_shelf_screen.dart';
-import '../../../memos/presentation/screens/memo_list_screen.dart';
-import '../../../profile/presentation/screens/profile_screen.dart';
-import '../providers/book_provider.dart';
-import '../providers/selected_book_provider.dart';
-import '../widgets/recent_books_section.dart';
-import '../widgets/recent_memos_section.dart';
-import '../widgets/user_profile_section.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
-import '../widgets/star_background_painter.dart';
-import '../../../memos/presentation/screens/memo_create_screen.dart';
+import '../../domain/models/book.dart';
+import '../../../memos/domain/models/memo.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
 import '../../../memos/presentation/providers/memo_provider.dart';
-import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
+import '../providers/selected_book_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  final bool autoNavigateToBookSearch;
-
-  const HomeScreen({
-    super.key,
-    this.autoNavigateToBookSearch = false,
-  });
+  const HomeScreen({super.key});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late PageController _pageController;
+  int _currentBookIndex = 0;
+
   @override
   void initState() {
     super.initState();
-    _initializeHome();
-    ref.read(analyticsProvider).logScreenView('home_screen');
+    _pageController = PageController(viewportFraction: 0.7);
   }
 
-  Future<void> _initializeHome() async {
-    // 먼저 인증과 데이터 로드를 완료
-    await _checkAuthAndLoadData();
-
-    // 인증이 완료된 후에만 자동 이동 실행
-    if (widget.autoNavigateToBookSearch && mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const BookSearchScreen(),
-        ),
-      );
-    }
-  }
-
-  Future<void> _checkAuthAndLoadData() async {
-    try {
-      final user = await ref.read(authProvider.notifier).getCurrentUser();
-      if (user == null || !mounted) {
-        // 인증 실패시 모든 캐시 초기화
-        ref.invalidate(userBooksProvider);
-        ref.invalidate(recentBooksProvider);
-        ref.invalidate(recentMemosProvider);
-
-        _redirectToLogin();
-        return;
-      }
-
-      // 데이터 리프레시
-      ref.invalidate(recentBooksProvider);
-      ref.invalidate(recentMemosProvider);
-
-      // 인증된 유저만 데이터 로드
-      final books = await ref.read(recentBooksProvider.future);
-      if (mounted && books.isNotEmpty) {
-        ref.read(selectedBookIdProvider.notifier).state = books.first.id;
-      }
-    } catch (e) {
-      if (mounted) {
-        _redirectToLogin();
-      }
-    }
-  }
-
-  void _redirectToLogin() {
-    if (mounted) {
-      context.go('/login');
-    }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // 빌드 시에도 유저 상태 확인
-    ref.listen(authProvider, (previous, next) {
-      if (!next.isLoading && (next.hasError || next.value == null)) {
-        context.go('/login');
-      }
-    });
-
-    final authState = ref.watch(authProvider);
-    if (!authState.isLoading &&
-        (authState.hasError || authState.value == null)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.go('/login');
-      });
-      return const SizedBox.shrink();
-    }
+    final userBooksAsync = ref.watch(userBooksProvider);
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: SafeArea(
+        child: userBooksAsync.when(
+          data: (books) => _buildContent(books),
+          loading: () => _buildLoadingState(),
+          error: (error, stack) => _buildErrorState(error),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(List<Book> books) {
+    if (books.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 별이 있는 배경
-          Positioned.fill(
-            child: CustomPaint(
-              painter: StarBackgroundPainter(numberOfStars: 150),
+          // 헤더
+          _buildHeader(),
+          const SizedBox(height: 32),
+          
+          // Reading 섹션
+          _buildReadingSection(books),
+          const SizedBox(height: 32),
+          
+          // Memo 섹션
+          _buildMemoSection(books),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Row(
+        children: [
+          // 프로필 이미지
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF48FF00),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: const Icon(
+              Icons.person,
+              color: Colors.black,
+              size: 24,
             ),
           ),
-          // 기존 content
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final authState = ref.watch(authProvider);
-                      if (authState.isLoading) {
-                        return const SizedBox(
-                            height: 80); // UserProfileSection의 대략적인 높이
-                      }
-                      return const UserProfileSection();
-                    },
-                  ),
-                  const SizedBox(height: 50),
-                  const SizedBox(
-                    height: 540,
-                    child: RecentBooksSection(),
-                  ),
-                  const SizedBox(height: 10),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final selectedBook = ref.watch(selectedBookProvider);
+          const SizedBox(width: 12),
+          const Text(
+            'Alex',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+          const Spacer(),
+          // Home 타이틀
+          const Text(
+            'Home',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                      if (selectedBook == null) return const SizedBox.shrink();
+  Widget _buildReadingSection(List<Book> books) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Reading',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 200,
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentBookIndex = index;
+              });
+              ref.read(selectedBookProvider.notifier).setSelectedBook(books[index]);
+            },
+            itemCount: books.length,
+            itemBuilder: (context, index) {
+              final book = books[index];
+              final isSelected = index == _currentBookIndex;
+              
+              return _buildBookCard(book, isSelected);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text(
-                              '${selectedBook.title.length > 8 ? '${selectedBook.title.substring(0, 8)}...' : selectedBook.title}의 반짝임 ✨',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
+  Widget _buildBookCard(Book book, bool isSelected) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        transform: Matrix4.identity()
+          ..scale(isSelected ? 1.0 : 0.9)
+          ..translate(0.0, isSelected ? 0.0 : 10.0),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF48FF00).withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: book.coverUrl != null && book.coverUrl!.isNotEmpty
+                ? Image.network(
+                    book.coverUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: const Color(0xFF1A1A1A),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF48FF00),
+                            strokeWidth: 2,
                           ),
-                          const SizedBox(height: 16),
-                          const SizedBox(
-                            height: 300,
-                            child: RecentMemosSection(),
-                          ),
-                        ],
+                        ),
                       );
                     },
+                    errorBuilder: (context, error, stackTrace) {
+                      print('책 표지 이미지 로딩 실패: $error');
+                      return _buildBookPlaceholder();
+                    },
+                  )
+                : _buildBookPlaceholder(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookPlaceholder() {
+    return Container(
+      color: const Color(0xFF1A1A1A),
+      child: const Center(
+        child: Icon(
+          Icons.book,
+          color: Colors.grey,
+          size: 48,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemoSection(List<Book> books) {
+    if (books.isEmpty || _currentBookIndex >= books.length) {
+      return _buildEmptyMemoState();
+    }
+
+    final selectedBook = books[_currentBookIndex];
+    final memosAsync = ref.watch(bookMemosProvider(selectedBook.id));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Memo',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        memosAsync.when(
+          data: (memos) => _buildMemosList(memos),
+          loading: () => _buildMemosLoadingState(),
+          error: (error, stack) => _buildMemosErrorState(error),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMemosList(List<Memo> memos) {
+    if (memos.isEmpty) {
+      return _buildEmptyMemosList();
+    }
+
+    return Container(
+      height: 200, // 고정 높이 설정
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: ListView.builder(
+        scrollDirection: Axis.vertical,
+        itemCount: memos.length,
+        itemBuilder: (context, index) {
+          final memo = memos[index];
+          return _buildMemoCard(memo);
+        },
+      ),
+    );
+  }
+
+  Widget _buildMemoCard(Memo memo) {
+    return GestureDetector(
+      onTap: () => context.push('/memos/detail/${memo.id}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.shade800,
+            width: 1,
+          ),
+        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 메모 이미지 (있는 경우)
+          if (memo.imageUrl != null) ...[
+            Container(
+              width: 80,
+              height: 80,
+              margin: const EdgeInsets.only(right: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey.shade900,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  memo.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey.shade900,
+                    child: const Icon(
+                      Icons.image,
+                      color: Colors.grey,
+                      size: 24,
+                    ),
                   ),
-                ],
+                ),
+              ),
+            ),
+          ],
+          
+          // 메모 내용
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 메모 텍스트
+                Text(
+                  memo.content,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontFamily: 'Pretendard',
+                    height: 1.4,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                
+                // 하단 정보
+                Row(
+                  children: [
+                    // 책 이름
+                    Expanded(
+                      child: Text(
+                        memo.bookTitle,
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 12,
+                          fontFamily: 'Pretendard',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // 공개/비공개 상태
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: memo.visibility == 'public' 
+                            ? const Color(0xFF48FF00).withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        memo.visibility == 'public' ? '공개' : '비공개',
+                        style: TextStyle(
+                          color: memo.visibility == 'public' 
+                              ? const Color(0xFF48FF00)
+                              : Colors.grey.shade400,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Pretendard',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // 작성 시간
+                    Text(
+                      _formatTimeAgo(memo.createdAt),
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 12,
+                        fontFamily: 'Pretendard',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.grey.shade800,
+                width: 1,
+              ),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.book_outlined,
+                color: Colors.grey,
+                size: 48,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'No books yet',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Add your first book to get started',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => context.push('/books/search'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF48FF00),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'ADD BOOK',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Pretendard',
               ),
             ),
           ),
         ],
       ),
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        titleSpacing: 16,
-        title: Image.asset(
-          'assets/images/logo_horizontal.png',
-          height: 32, // 로고 이미지 높이 조정
-          fit: BoxFit.contain,
-        ),
-        centerTitle: false,
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: CircularProgressIndicator(
+        color: Color(0xFF48FF00),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await ref.read(analyticsProvider).logButtonClick(
-                'fab_create_memo',
-                'home_screen',
-              );
-          if (!mounted) return;
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.white,
-            constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.of(context).size.height * 0.3, // 화면 높이의 30%로 설정
-            ),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-            ),
-            builder: (context) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16), // 상단 여백 추가
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4117EB).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.menu_book_outlined,
-                      color: Color(0xFF4117EB),
-                    ),
-                  ),
-                  title: const Text(
-                    '책 등록하기',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context); // 모달 닫기
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BookSearchScreen(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4117EB).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.edit_outlined,
-                      color: Color(0xFF4117EB),
-                    ),
-                  ),
-                  title: const Text(
-                    '메모 작성하기',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MemoCreateScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16), // 하단 여백 추가
-              ],
-            ),
-          );
-        },
-        backgroundColor: const Color(0xFF4117EB),
-        shape: const CircleBorder(),
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade800,
-              width: 0.5,
+    );
+  }
+
+  Widget _buildErrorState(Object error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 48,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Error: $error',
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 16,
+              fontFamily: 'Pretendard',
             ),
           ),
-        ),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.black,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.grey.shade600,
-          currentIndex: 0,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                ref.read(analyticsProvider).logButtonClick(
-                      'nav_home',
-                      'home_screen',
-                    );
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const HomeScreen(),
-                  ),
-                  (route) => false,
-                );
-                break;
-              case 1:
-                ref.read(analyticsProvider).logButtonClick(
-                      'nav_bookshelf',
-                      'home_screen',
-                    );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const BookShelfScreen()),
-                );
-                break;
-              case 2:
-                ref.read(analyticsProvider).logButtonClick(
-                      'nav_memolist',
-                      'home_screen',
-                    );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const MemoListScreen()),
-                );
-                break;
-              case 3:
-                ref.read(analyticsProvider).logButtonClick(
-                      'nav_profile',
-                      'home_screen',
-                    );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const ProfileScreen()),
-                );
-                break;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: '홈',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.book),
-              label: '책 목록',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.note),
-              label: '메모',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: '프로필',
-            ),
-          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyMemoState() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Text(
+        'No memos available',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 14,
+          fontFamily: 'Pretendard',
         ),
       ),
     );
+  }
+
+  Widget _buildEmptyMemosList() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Text(
+        'No memos for this book',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 14,
+          fontFamily: 'Pretendard',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemosLoadingState() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Text(
+        'Loading memos...',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 14,
+          fontFamily: 'Pretendard',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemosErrorState(Object error) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Text(
+        'Error loading memos: $error',
+        style: const TextStyle(
+          color: Colors.red,
+          fontSize: 14,
+          fontFamily: 'Pretendard',
+        ),
+      ),
+    );
+  }
+
+  String _formatTimeAgo(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return '${weeks}w ago';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return '${months}m ago';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return '${years}y ago';
+    }
   }
 }

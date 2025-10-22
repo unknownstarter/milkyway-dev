@@ -35,10 +35,10 @@ class AuthBackgroundLayout extends StatelessWidget {
                         center: Alignment.topCenter,
                         radius: 1.2,
                         colors: [
-                          Colors.white.withOpacity(1.0),
-                          Colors.white.withOpacity(0.8),
-                          Colors.white.withOpacity(0.4),
-                          Colors.white.withOpacity(0.0),
+                          Colors.white.withAlpha(255),
+                          Colors.white.withAlpha(204),
+                          Colors.white.withAlpha(102),
+                          Colors.white.withAlpha(0),
                         ],
                         stops: const [0.0, 0.3, 0.6, 1.0],
                       ).createShader(bounds);
@@ -62,7 +62,7 @@ class AuthBackgroundLayout extends StatelessWidget {
                       radius: 0.8,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.5),
+                        Colors.black.withAlpha(128),
                         Colors.black,
                       ],
                       stops: const [0.0, 0.6, 1.0],

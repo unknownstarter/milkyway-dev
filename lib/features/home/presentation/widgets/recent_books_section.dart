@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../books/presentation/screens/book_detail_screen.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/book_provider.dart';
 import '../providers/selected_book_provider.dart';
 import 'book_card.dart';
-import '../../../books/presentation/screens/book_search_screen.dart';
 
 class RecentBooksSection extends ConsumerWidget {
   const RecentBooksSection({super.key});
@@ -24,7 +23,7 @@ class RecentBooksSection extends ConsumerWidget {
               const Padding(
                 padding: EdgeInsets.only(left: 16, bottom: 15),
                 child: Text(
-                  '새로운 책을 골라주세요 👇',
+                  '새로운 책을 골라주세요 \ud83d\udc47',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -33,12 +32,7 @@ class RecentBooksSection extends ConsumerWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BookSearchScreen(),
-                  ),
-                ),
+                onTap: () => context.go('/books/search'),
                 child: Container(
                   height: 450,
                   margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -110,13 +104,7 @@ class RecentBooksSection extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8.0),
                     child: BookCard(
                       book: books[index],
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              BookDetailScreen(bookId: books[index].id),
-                        ),
-                      ),
+                      onTap: () => context.go('/books/detail/${books[index].id}'),
                     ),
                   ),
                 ),

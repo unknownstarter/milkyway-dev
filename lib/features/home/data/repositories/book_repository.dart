@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/book.dart';
-import '../../domain/models/memo.dart';
+import '../../../memos/domain/models/memo.dart';
+import 'dart:developer';
 
 class BookRepository {
   final SupabaseClient _client;
@@ -82,7 +83,7 @@ class BookRepository {
               }))
           .toList();
     } catch (e) {
-      print('Error getting user books: $e');
+      log('Error getting user books: $e');
       rethrow;
     }
   }
@@ -164,4 +165,29 @@ class BookRepository {
         .eq('book_id', bookId)
         .eq('user_id', _client.auth.currentUser!.id);
   }
+
+  Future<bool> hasUserBookConnection(String bookId, String userId) async {
+    final response = await _client
+        .from('user_books')
+        .select()
+        .eq('book_id', bookId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    return response != null;
+  }
+
+  String getCurrentUserId() {
+    return _client.auth.currentUser!.id;
+  }
+
+  Future<void> createUserBookConnection(String bookId, String userId) async {
+    await _client.from('user_books').insert({
+      'book_id': bookId,
+      'user_id': userId,
+      'status': '읽고 싶은',
+    });
+  }
+
+
 }

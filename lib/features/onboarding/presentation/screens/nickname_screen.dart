@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/presentation/widgets/star_background_scaffold.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../../onboarding/presentation/providers/onboarding_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../providers/onboarding_provider.dart';
 import '../../../../core/utils/random_nickname_generator.dart';
+import '../../../../core/providers/analytics_provider.dart';
 
 class NicknameScreen extends ConsumerStatefulWidget {
   const NicknameScreen({super.key});
@@ -16,11 +16,13 @@ class NicknameScreen extends ConsumerStatefulWidget {
 class _NicknameScreenState extends ConsumerState<NicknameScreen> {
   final _nicknameController = TextEditingController();
   bool _isButtonEnabled = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _nicknameController.addListener(_validateInput);
+    ref.read(analyticsProvider).logScreenView('nickname_screen');
   }
 
   @override
@@ -31,26 +33,222 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
 
   void _validateInput() {
     final nickname = _nicknameController.text;
-    final hasSpecialCharacters =
-        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(nickname);
+    final hasSpecialCharacters = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(nickname);
 
     setState(() {
-      _isButtonEnabled = nickname.length >= 2 && // 최소 2글자
-          nickname.length <= 20 && // 최대 20글자
-          !hasSpecialCharacters; // 특수문자 없음
+      _isButtonEnabled = nickname.length >= 2 &&
+          nickname.length <= 20 &&
+          !hasSpecialCharacters;
     });
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0A0A),
+        title: const Text(
+          '닉네임 설정',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            
+            // 제목
+            _buildTitle(),
+            const SizedBox(height: 40),
+            
+            // 닉네임 입력
+            _buildNicknameInput(),
+            const SizedBox(height: 20),
+            
+            // 랜덤 닉네임 버튼
+            _buildRandomNicknameButton(),
+            const SizedBox(height: 40),
+            
+            // 건너뛰기 버튼
+            _buildSkipButton(),
+            const SizedBox(height: 20),
+            
+            // 다음 버튼
+            _buildNextButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitle() {
+    return Column(
+      children: [
+        const Text(
+          '닉네임을 설정해주세요',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Pretendard',
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '다른 사용자들이 볼 수 있는 이름입니다',
+          style: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 16,
+            fontFamily: 'Pretendard',
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNicknameInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '닉네임',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _nicknameController,
+          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+          decoration: InputDecoration(
+            hintText: '닉네임을 입력하세요',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Pretendard'),
+            filled: true,
+            fillColor: const Color(0xFF1A1A1A),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF48FF00)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '2-20자, 특수문자 사용 불가',
+          style: TextStyle(
+            color: Colors.grey.shade500,
+            fontSize: 12,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRandomNicknameButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _generateRandomNickname,
+        icon: const Icon(Icons.shuffle, color: Color(0xFF48FF00)),
+        label: const Text(
+          '랜덤 닉네임 생성',
+          style: TextStyle(
+            color: Color(0xFF48FF00),
+            fontFamily: 'Pretendard',
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF48FF00)),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkipButton() {
+    return TextButton(
+      onPressed: _isLoading ? null : _handleSkip,
+      child: Text(
+        '건너뛰기',
+        style: TextStyle(
+          color: Colors.grey.shade400,
+          fontSize: 16,
+          fontFamily: 'Pretendard',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNextButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isButtonEnabled && !_isLoading ? _handleNext : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF48FF00),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(
+                color: Colors.black,
+                strokeWidth: 2,
+              )
+            : const Text(
+                '다음',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Pretendard',
+                ),
+              ),
+      ),
+    );
+  }
+
+  void _generateRandomNickname() {
+    final randomNickname = RandomNicknameGenerator.generate();
+    _nicknameController.text = randomNickname;
+  }
+
   Future<void> _handleSkip() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final randomNickname = RandomNicknameGenerator.generate();
-
-      await ref.read(authProvider.notifier).updateProfile(
-            nickname: randomNickname,
-          );
-
-      // 다음 온보딩 단계로 이동
-      ref.read(onboardingProvider.notifier).nextStep();
+      await ref.read(authProvider.notifier).updateProfile(nickname: randomNickname);
+      await ref.read(onboardingProvider.notifier).setNickname(randomNickname);
 
       if (mounted) {
         context.go('/onboarding/profile-image');
@@ -59,211 +257,50 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text('닉네임 설정 중 오류가 발생했습니다: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return StarBackgroundScaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 상단 헤더
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // 로고
-                  Image.asset('assets/images/logo.png', width: 40, height: 40),
-                  // 인디케이터
-                  Row(
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF48FF00),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Skip 버튼
-                  TextButton(
-                    onPressed: _handleSkip,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      'Skip',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                '닉네임을 알려주세요.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _nicknameController,
-                style: const TextStyle(color: Colors.white),
-                maxLength: 20,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.1),
-                  hintText: '2~20자 입력 (특수문자 제외)',
-                  errorText: _nicknameController.text.isNotEmpty
-                      ? _getErrorText()
-                      : null,
-                  errorStyle: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 12,
-                  ),
-                  hintStyle: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 16,
-                  ),
-                  counterText: '${_nicknameController.text.length}/20',
-                  counterStyle: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: Colors.red),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: Colors.red),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '나중에 프로필에서 변경할 수 있어요.',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isButtonEnabled
-                      ? () async {
-                          try {
-                            await ref.read(authProvider.notifier).updateProfile(
-                                  nickname: _nicknameController.text,
-                                );
+  Future<void> _handleNext() async {
+    if (!_isButtonEnabled) return;
 
-                            // 다음 온보딩 단계로 이동
-                            ref.read(onboardingProvider.notifier).nextStep();
+    setState(() {
+      _isLoading = true;
+    });
 
-                            if (mounted) {
-                              context.go('/onboarding/profile-image');
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(e.toString()),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3C19E1),
-                    disabledBackgroundColor: const Color(0xFF969696),
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text(
-                    '저장할게요',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+    try {
+      final nickname = _nicknameController.text.trim();
+      await ref.read(authProvider.notifier).updateProfile(nickname: nickname);
+      await ref.read(onboardingProvider.notifier).setNickname(nickname);
+
+      if (mounted) {
+        context.go('/onboarding/profile-image');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('닉네임 설정 중 오류가 발생했습니다: $e'),
+            backgroundColor: Colors.red,
           ),
-        ),
-      ),
-    );
-  }
-
-  String? _getErrorText() {
-    final nickname = _nicknameController.text;
-    if (nickname.length < 2) {
-      return '2글자 이상 입력해주세요';
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(nickname)) {
-      return '특수문자는 사용할 수 없어요';
-    }
-    return null;
   }
 }

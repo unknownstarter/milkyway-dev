@@ -16,7 +16,7 @@ void main() async {
   timeago.setLocaleMessages('ko', timeago.KoMessages());
 
   await Supabase.initialize(
-    url: 'https://${EnvConfig.supabaseUrl}',
+    url: EnvConfig.supabaseUrl,
     anonKey: EnvConfig.supabaseAnonKey,
   );
 

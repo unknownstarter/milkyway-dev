@@ -18,13 +18,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     GoogleSignIn? googleSignIn,
     SupabaseClient? supabase,
   })  : _analytics = analytics,
-        _googleSignIn = googleSignIn ??
-            GoogleSignIn(
-              scopes: ['email', 'profile'],
-              clientId: Platform.isIOS
-                  ? '394691029555-cbbjdf7io2tec9004t3b31ons9r0a2g3.apps.googleusercontent.com'
-                  : '394691029555-98k9mp6pt0fas3vktvqiaei4k45df2du.apps.googleusercontent.com',
-            ),
+        _googleSignIn = googleSignIn ?? GoogleSignIn(scopes: ['email', 'profile']),
         _supabase = supabase ?? Supabase.instance.client;
 
   String _sha256ofString(String input) {
@@ -36,177 +30,194 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<UserModel> signInWithGoogle() async {
     try {
-      // iOS/Android 공통 로직
+      print('🔵 Google 로그인 시작...');
+      
+      // 기존 세션 정리
+      await _googleSignIn.signOut();
+      print('🔵 기존 세션 정리 완료');
+      
+      // Google 로그인
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) throw Exception('Google sign in cancelled');
+      if (googleUser == null) {
+        print('❌ Google 로그인 취소됨');
+        throw Exception('Google sign in cancelled');
+      }
 
-      print('1. Google 계정 정보: ${googleUser.email}');
+      print('🔵 Google 사용자 정보 획득: ${googleUser.email}');
+      
+      // Google 인증 정보 획득
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      print('🔵 Google 인증 토큰 획득 완료');
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      print('2. Google 토큰: ${googleAuth.idToken?.substring(0, 50)}...');
-
-      final AuthResponse res = await _supabase.auth.signInWithIdToken(
+      // Supabase 로그인
+      final AuthResponse response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
         accessToken: googleAuth.accessToken,
       );
-      print('3. Supabase 응답: ${res.user?.toJson()}');
 
-      // 기존 사용자인지 확인
-      final existingUser = await _supabase
-          .from('users')
-          .select()
-          .eq('id', res.user!.id)
-          .maybeSingle();
-      print('4. DB 유저 조회: ${existingUser}');
-
-      if (existingUser == null) {
-        print('5-1. 새 유저 데이터 준비: {');
-        print('   id: ${res.user!.id},');
-        print('   email: ${googleUser.email},');
-        print('   nickname: ${googleUser.displayName},');
-        print('   picture_url: ${googleUser.photoUrl}');
-        print('}');
-
-        await _supabase.from('users').upsert({
-          'id': res.user!.id,
-          'email': googleUser.email,
-          'nickname': googleUser.displayName ?? '사용자',
-          'picture_url': googleUser.photoUrl,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-          'auth_provider': 'google',
-          'onboarding_completed': false,
-        });
-        print('5-2. 새 유저 생성 완료');
+      if (response.user == null) {
+        print('❌ Supabase 로그인 실패');
+        throw Exception('Supabase authentication failed');
       }
 
-      // 최신 사용자 정보 조회
-      final userData = await _supabase
-          .from('users')
-          .select()
-          .eq('id', res.user!.id)
-          .single();
-      print('6. 최종 유저 정보: ${userData['id']}');
+      print('🔵 Supabase 로그인 성공: ${response.user!.id}');
 
-      await _analytics.logLogin('google');
+      // 사용자 정보 생성
+      final userModel = UserModel(
+        id: response.user!.id,
+        email: response.user!.email ?? '',
+        nickname: googleUser.displayName ?? '사용자',
+        pictureUrl: googleUser.photoUrl,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-      return UserModel.fromJson(userData);
+      print('✅ Google 로그인 완료: ${userModel.email}');
+      return userModel;
     } catch (e) {
-      print('❌ 로그인 실패 상세: ${e.toString()}');
-      throw Exception('Google 로그인 실패: $e');
-    }
-  }
-
-  @override
-  Future<void> signOut() async {
-    try {
-      await Future.wait([
-        _googleSignIn.signOut(),
-        _supabase.auth.signOut(),
-      ]);
-    } catch (e) {
-      throw Exception('Failed to sign out: $e');
-    }
-  }
-
-  @override
-  Future<UserModel> getCurrentUser() async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) throw Exception('Not logged in');
-
-      print(
-          'getCurrentUser - session: ${_supabase.auth.currentSession?.toJson()}');
-      print(
-          'getCurrentUser - currentUser: ${_supabase.auth.currentUser?.toJson()}');
-
-      final userData =
-          await _supabase.from('users').select().eq('id', userId).single();
-      return UserModel.fromJson(userData);
-    } catch (e) {
-      print('getCurrentUser 실패: $e');
-      throw Exception('Failed to get user: $e');
+      print('❌ Google 로그인 실패: $e');
+      rethrow;
     }
   }
 
   @override
   Future<UserModel> signInWithApple() async {
     try {
-      final rawNonce = _supabase.auth.generateRawNonce();
-      final hashedNonce = _sha256ofString(rawNonce);
-
+      print('🍎 Apple 로그인 시작...');
+      
+      // Apple 로그인 요청
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
-        nonce: hashedNonce,
       );
 
-      final AuthResponse res = await _supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.apple,
-        idToken: credential.identityToken!,
-        nonce: rawNonce,
-      );
-
-      // 사용자 정보 확인 및 생성
-      final existingUser = await _supabase
-          .from('users')
-          .select()
-          .eq('id', res.user!.id)
-          .maybeSingle();
-
-      if (existingUser == null) {
-        // Apple은 두 번째 로그인부터 이름/이메일을 제공하지 않으므로,
-        // 첫 로그인 시 저장해야 함
-        final String nickname = [credential.givenName, credential.familyName]
-            .where((name) => name != null)
-            .join(' ');
-
-        await _supabase.from('users').upsert({
-          'id': res.user!.id,
-          'email': credential.email,
-          'nickname': nickname.isNotEmpty ? nickname : '사용자',
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-          'auth_provider': 'apple',
-        });
+      if (credential.identityToken == null) {
+        print('❌ Apple 로그인 취소됨');
+        throw Exception('Apple sign in cancelled');
       }
 
-      final userData = await _supabase
-          .from('users')
-          .select()
-          .eq('id', res.user!.id)
-          .single();
+      print('🍎 Apple 사용자 정보 획득: ${credential.userIdentifier}');
+      
+      // Supabase 로그인
+      final AuthResponse response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: credential.identityToken!,
+        accessToken: credential.authorizationCode,
+      );
 
-      await _analytics.logLogin('apple');
+      if (response.user == null) {
+        print('❌ Supabase 로그인 실패');
+        throw Exception('Supabase authentication failed');
+      }
 
-      return UserModel.fromJson(userData);
+      print('🍎 Supabase 로그인 성공: ${response.user!.id}');
+
+      // 사용자 정보 생성
+      final userModel = UserModel(
+        id: response.user!.id,
+        email: response.user!.email ?? '',
+        nickname: '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim(),
+        pictureUrl: null,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      print('✅ Apple 로그인 완료: ${userModel.email}');
+      return userModel;
     } catch (e) {
-      print('❌ Apple 로그인 실패: ${e.toString()}');
-      throw Exception('Apple 로그인 실패: $e');
+      print('❌ Apple 로그인 실패: $e');
+      rethrow;
     }
   }
 
+  @override
+  Future<void> signOut() async {
+    try {
+      print('🚪 로그아웃 시작...');
+      
+      // Google 로그아웃
+      await _googleSignIn.signOut();
+      print('🔵 Google 로그아웃 완료');
+      
+      // Supabase 로그아웃
+      await _supabase.auth.signOut();
+      print('🔵 Supabase 로그아웃 완료');
+      
+      print('✅ 로그아웃 완료');
+    } catch (e) {
+      print('❌ 로그아웃 실패: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UserModel?> getCurrentUser() async {
+    try {
+      final session = _supabase.auth.currentSession;
+      if (session?.user == null) return null;
+
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', session!.user.id)
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      return UserModel.fromJson(response);
+    } catch (e) {
+      print('❌ 현재 사용자 정보 조회 실패: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> updateProfile({
+    String? nickname,
+    String? pictureUrl,
+  }) async {
+    try {
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) throw Exception('User not authenticated');
+
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      if (nickname != null) updates['nickname'] = nickname;
+      if (pictureUrl != null) updates['picture_url'] = pictureUrl;
+
+      await _supabase
+          .from('users')
+          .update(updates)
+          .eq('id', currentUser.id);
+
+      print('✅ 프로필 업데이트 완료');
+    } catch (e) {
+      print('❌ 프로필 업데이트 실패: $e');
+      rethrow;
+    }
+  }
+
+  @override
   Future<void> deleteAccount() async {
     try {
-      final userId = _supabase.auth.currentUser!.id;
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) throw Exception('User not authenticated');
 
-      // Edge Function 호출
-      await _supabase.functions.invoke(
-        'delete-user',
-        body: {'user_id': userId},
-      );
-
-      // 로컬 로그아웃
-      final googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut();
+      // 사용자 데이터 삭제
+      await _supabase.from('users').delete().eq('id', currentUser.id);
+      
+      // 계정 삭제
       await _supabase.auth.signOut();
+      
+      print('✅ 계정 삭제 완료');
     } catch (e) {
-      print('❌ 계정 삭제 중 오류가 발생했습니다: $e');
-      throw Exception('계정 삭제 중 오류가 발생했습니다.');
+      print('❌ 계정 삭제 실패: $e');
+      rethrow;
     }
   }
 }

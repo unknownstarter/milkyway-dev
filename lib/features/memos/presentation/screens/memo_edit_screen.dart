@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/models/memo.dart';
-import '../providers/memo_provider.dart';
-import 'dart:io';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
-import 'package:whatif_milkyway_app/core/providers/supabase_client_provider.dart';
+import 'dart:io';
+import '../providers/memo_provider.dart';
+import '../../../../core/providers/analytics_provider.dart';
 
 class MemoEditScreen extends ConsumerStatefulWidget {
-  final Memo memo;
+  final String memoId;
 
   const MemoEditScreen({
     super.key,
-    required this.memo,
+    required this.memoId,
   });
 
   @override
@@ -22,20 +19,16 @@ class MemoEditScreen extends ConsumerStatefulWidget {
 }
 
 class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
-  late final TextEditingController _contentController;
-  late final TextEditingController _pageController;
-  bool _isLoading = false;
+  final _contentController = TextEditingController();
+  final _pageController = TextEditingController();
   String? _selectedImagePath;
+  bool _isLoading = false;
   bool _hasChanges = false;
 
   @override
   void initState() {
     super.initState();
-    _contentController = TextEditingController(text: widget.memo.content);
-    _pageController = TextEditingController(
-      text: widget.memo.page?.toString() ?? '',
-    );
-
+    _loadMemoData();
     _contentController.addListener(_checkChanges);
     _pageController.addListener(_checkChanges);
     ref.read(analyticsProvider).logScreenView('memo_edit_screen');
@@ -43,21 +36,262 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
 
   @override
   void dispose() {
-    _contentController.removeListener(_checkChanges);
-    _pageController.removeListener(_checkChanges);
     _contentController.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
-  void _checkChanges() {
-    final contentChanged = _contentController.text != widget.memo.content;
-    final pageChanged =
-        _pageController.text != (widget.memo.page?.toString() ?? '');
+  Future<void> _loadMemoData() async {
+    try {
+      final memo = await ref.read(memoProvider(widget.memoId).future);
+      if (mounted) {
+        _contentController.text = memo.content;
+        _pageController.text = memo.page?.toString() ?? '';
+        _selectedImagePath = memo.imageUrl;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('메모를 불러올 수 없습니다: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
+  void _checkChanges() {
     setState(() {
-      _hasChanges = contentChanged || pageChanged || _selectedImagePath != null;
+      _hasChanges = _contentController.text.isNotEmpty;
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0A0A),
+        title: const Text(
+          '메모 편집',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: _hasChanges ? _showExitDialog : () => context.pop(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isLoading ? null : _saveMemo,
+            child: Text(
+              '저장',
+              style: TextStyle(
+                color: _isLoading ? Colors.grey : const Color(0xFF48FF00),
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 페이지 입력
+            _buildPageInput(),
+            const SizedBox(height: 20),
+            
+            // 메모 내용
+            _buildContentInput(),
+            const SizedBox(height: 20),
+            
+            // 이미지 선택
+            _buildImageSelector(),
+            const SizedBox(height: 20),
+            
+            // 선택된 이미지
+            if (_selectedImagePath != null) _buildSelectedImage(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '페이지 (선택사항)',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _pageController,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+          decoration: InputDecoration(
+            hintText: '예: 42',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Pretendard'),
+            filled: true,
+            fillColor: const Color(0xFF1A1A1A),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF48FF00)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContentInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '메모 내용',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _contentController,
+          maxLines: 8,
+          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+          decoration: InputDecoration(
+            hintText: '읽은 내용이나 생각을 적어보세요...',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Pretendard'),
+            filled: true,
+            fillColor: const Color(0xFF1A1A1A),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF48FF00)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '이미지 (선택사항)',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _selectImage,
+                icon: const Icon(Icons.add_photo_alternate, color: Color(0xFF48FF00)),
+                label: const Text(
+                  '이미지 변경',
+                  style: TextStyle(
+                    color: Color(0xFF48FF00),
+                    fontFamily: 'Pretendard',
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF48FF00)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            if (_selectedImagePath != null) ...[
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: _removeImage,
+                icon: const Icon(Icons.delete, color: Colors.red),
+                label: const Text(
+                  '제거',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Pretendard',
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.red),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectedImage() {
+    return Container(
+      width: double.infinity,
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade800),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: _selectedImagePath!.startsWith('http')
+            ? Image.network(
+                _selectedImagePath!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.grey.shade900,
+                  child: const Icon(Icons.image, color: Colors.grey, size: 32),
+                ),
+              )
+            : Image.file(
+                File(_selectedImagePath!),
+                fit: BoxFit.cover,
+              ),
+      ),
+    );
   }
 
   Future<void> _selectImage() async {
@@ -66,34 +300,20 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
       final source = await showDialog<ImageSource>(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Colors.black,
+          backgroundColor: const Color(0xFF1A1A1A),
           title: const Text('이미지 선택', style: TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_library, color: Colors.white),
-                title: const Text('갤러리에서 선택',
-                    style: TextStyle(color: Colors.white)),
-                onTap: () async {
-                  await ref.read(analyticsProvider).logButtonClick(
-                        'select_image_gallery',
-                        'memo_edit_screen',
-                      );
-                  Navigator.pop(context, ImageSource.gallery);
-                },
+                title: const Text('갤러리에서 선택', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt, color: Colors.white),
-                title: const Text('카메라로 촬영',
-                    style: TextStyle(color: Colors.white)),
-                onTap: () async {
-                  await ref.read(analyticsProvider).logButtonClick(
-                        'select_image_camera',
-                        'memo_edit_screen',
-                      );
-                  Navigator.pop(context, ImageSource.camera);
-                },
+                title: const Text('카메라로 촬영', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
             ],
           ),
@@ -101,349 +321,107 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
       );
 
       if (source != null) {
-        // 권한 체크
-        final androidInfo =
-            Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
-        final permission = source == ImageSource.camera
-            ? Platform.isAndroid
-                ? await Permission.camera.request()
-                : PermissionStatus.granted // iOS는 ImagePicker가 자동으로 처리
-            : (androidInfo?.version.sdkInt ?? 0) >= 33
-                ? await Permission.photos.request()
-                : await Permission.storage.request();
-
-        if (!permission.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('이미지를 선택하려면 권한이 필요합니다'),
-                action: Platform.isAndroid
-                    ? const SnackBarAction(
-                        label: '설정',
-                        onPressed: openAppSettings,
-                      )
-                    : null,
-              ),
-            );
-          }
-          return;
-        }
-
-        final pickedFile = await picker.pickImage(
-          source: source,
-          maxWidth: 800,
-          imageQuality: 80,
-        );
-
-        if (pickedFile != null) {
+        final image = await picker.pickImage(source: source);
+        if (image != null) {
           setState(() {
-            _selectedImagePath = pickedFile.path;
-            _hasChanges = true;
+            _selectedImagePath = image.path;
           });
         }
       }
     } catch (e) {
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다: $e')),
-        );
-      }
+        SnackBar(
+          content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  Future<void> _updateMemo() async {
-    await ref.read(analyticsProvider).logButtonClick(
-          'memo_update',
-          'memo_edit_screen',
-        );
-    setState(() => _isLoading = true);
-    try {
-      String? imageUrl;
-      if (_selectedImagePath == 'remove') {
-        // 이미지 삭제를 선택한 경우
-        imageUrl = null;
+  void _removeImage() {
+    setState(() {
+      _selectedImagePath = null;
+    });
+  }
 
-        // 기존 이미지가 있다면 삭제
-        if (widget.memo.imageUrl != null) {
-          try {
-            final oldFileName = widget.memo.imageUrl!.split('/').last;
-            await ref
-                .read(supabaseClientProvider)
-                .storage
-                .from('memo_images')
-                .remove([
-              '${ref.read(supabaseClientProvider).auth.currentUser!.id}/$oldFileName'
-            ]);
-          } catch (e) {
-            print('기존 이미지 삭제 실패: $e');
-          }
-        }
-      } else if (_selectedImagePath != null) {
-        // 새 이미지를 선택한 경우
-        final file = File(_selectedImagePath!);
-        final fileName =
-            '${ref.read(supabaseClientProvider).auth.currentUser!.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-        // 기존 이미지가 있다면 삭제
-        if (widget.memo.imageUrl != null) {
-          try {
-            final oldFileName = widget.memo.imageUrl!.split('/').last;
-            await ref
-                .read(supabaseClientProvider)
-                .storage
-                .from('memo_images')
-                .remove([
-              '${ref.read(supabaseClientProvider).auth.currentUser!.id}/$oldFileName'
-            ]);
-          } catch (e) {
-            print('기존 이미지 삭제 실패: $e');
-          }
-        }
-
-        // 새 이미지 업로드
-        await ref
-            .read(supabaseClientProvider)
-            .storage
-            .from('memo_images')
-            .upload(fileName, file);
-
-        // 이미지 URL 가져오기
-        imageUrl = await ref
-            .read(supabaseClientProvider)
-            .storage
-            .from('memo_images')
-            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-      } else {
-        // 이미지를 수정하지 않은 경우 기존 이미지 URL 유지
-        imageUrl = widget.memo.imageUrl;
-      }
-
-      await ref.read(updateMemoProvider(
-        (
-          memoId: widget.memo.id,
-          content: _contentController.text,
-          page: int.tryParse(_pageController.text),
-          bookId: widget.memo.bookId,
-          imageUrl: imageUrl,
+  Future<void> _saveMemo() async {
+    if (_contentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('메모 내용을 입력해주세요'),
+          backgroundColor: Colors.red,
         ),
-      ).future);
+      );
+      return;
+    }
 
-      // 메모 수정 완료 시 이벤트 발생
-      ref.read(memoUpdateEventProvider.notifier).state = widget.memo.id;
+    setState(() {
+      _isLoading = true;
+    });
 
-      if (mounted) Navigator.pop(context);
+    try {
+      await ref.read(memoFormProvider.notifier).updateMemo(
+        memoId: widget.memoId,
+        content: _contentController.text.trim(),
+        page: _pageController.text.isNotEmpty ? int.tryParse(_pageController.text) : null,
+        imagePath: _selectedImagePath,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('메모가 수정되었습니다'),
+            backgroundColor: Color(0xFF48FF00),
+          ),
+        );
+        context.pop();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('메모 수정 실패: $e')),
+          SnackBar(
+            content: Text('메모 수정 중 오류가 발생했습니다: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+  Future<void> _showExitDialog() async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          '변경사항이 있습니다',
+          style: TextStyle(color: Colors.white),
         ),
-        title: Text(
-          '${widget.memo.bookTitle} 메모 수정',
-          style: const TextStyle(color: Colors.white),
+        content: const Text(
+          '저장하지 않고 나가시겠습니까?',
+          style: TextStyle(color: Colors.white),
         ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '페이지 숫자를 입력해주세요 (선택사항)',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _pageController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: '페이지 숫자 입력',
-                  hintStyle: TextStyle(color: Colors.grey.shade600),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade800),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade600),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                '이미지를 추가할 수 있어요 (선택사항)',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _selectImage,
-                child: Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade800),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: _selectedImagePath != null
-                      ? Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(_selectedImagePath!),
-                                width: double.infinity,
-                                height: 100,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned(
-                              right: 8,
-                              top: 8,
-                              child: IconButton(
-                                icon: const Icon(Icons.close,
-                                    color: Colors.white),
-                                onPressed: () =>
-                                    setState(() => _selectedImagePath = null),
-                              ),
-                            ),
-                          ],
-                        )
-                      : widget.memo.imageUrl != null
-                          ? Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    widget.memo.imageUrl!,
-                                    width: double.infinity,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 8,
-                                  top: 8,
-                                  child: IconButton(
-                                    icon: const Icon(Icons.close,
-                                        color: Colors.white),
-                                    onPressed: () => setState(() {
-                                      _selectedImagePath = 'remove';
-                                      _hasChanges = true;
-                                    }),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const Center(
-                              child: Icon(
-                                Icons.add_photo_alternate_outlined,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                            ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                '반짝이는 메모 내용을 작성해주세요',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _contentController,
-                style: const TextStyle(color: Colors.white),
-                maxLength: 200,
-                maxLines: 6,
-                decoration: InputDecoration(
-                  hintText: '최대 200자까지 작성 가능해요',
-                  hintStyle: TextStyle(color: Colors.grey.shade600),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade800),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade600),
-                  ),
-                  contentPadding: const EdgeInsets.all(16),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed:
-                      _isLoading ? null : (_hasChanges ? _updateMemo : null),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _hasChanges
-                        ? const Color(0xFF4117EB)
-                        : const Color(0xFF1A1A1A),
-                    foregroundColor:
-                        _hasChanges ? Colors.white : const Color(0xFF666666),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    disabledBackgroundColor: const Color(0xFF1A1A1A),
-                    disabledForegroundColor: const Color(0xFF666666),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          '수정하기',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: _hasChanges
-                                ? Colors.white
-                                : const Color(0xFF666666),
-                          ),
-                        ),
-                ),
-              ),
-            ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
           ),
-        ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('나가기', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
+
+    if (shouldExit == true && mounted) {
+      context.pop();
+    }
   }
 }

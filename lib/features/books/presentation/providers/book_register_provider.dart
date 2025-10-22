@@ -1,11 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/models/book.dart';
-import '../../data/repositories/book_repository.dart';
+import '../../../home/domain/models/book.dart';
+import '../../../home/data/repositories/book_repository.dart';
 import '../../domain/models/naver_book.dart';
 import '../providers/user_books_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../home/presentation/providers/book_provider.dart'
     show recentBooksProvider;
+import 'dart:developer';
 
 final bookRepositoryProvider = Provider<BookRepository>((ref) {
   return BookRepository(Supabase.instance.client);
@@ -63,7 +64,7 @@ class BookRegisterNotifier extends StateNotifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
       return book;
     } catch (e, st) {
-      print('Error in registerBook: $e');
+      log('Error in registerBook: $e');
       state = AsyncValue.error(e, st);
       return null;
     }

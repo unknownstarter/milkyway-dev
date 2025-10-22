@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/book.dart';
+import '../../../home/domain/models/book.dart';
 
 class BookSearchItem extends StatelessWidget {
   final Book book;

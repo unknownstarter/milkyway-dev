@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../books/presentation/screens/book_detail_screen.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/models/book.dart';
 
 class BookCard extends StatelessWidget {
@@ -44,14 +44,11 @@ class BookCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookDetailScreen(
-              bookId: book!.id,
-            ),
-          ),
-        );
+        if (book != null) {
+          context.go('/books/detail/${book!.id}');
+        } else {
+          onTap();
+        }
       },
       child: Container(
         width: MediaQuery.of(context).size.width * 0.8,

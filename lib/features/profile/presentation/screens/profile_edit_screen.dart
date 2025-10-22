@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:go_router/go_router.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/providers/analytics_provider.dart';
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key});
@@ -22,10 +21,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   @override
   void initState() {
     super.initState();
-    final user = ref.read(authProvider).value;
-    if (user != null) {
-      _nicknameController.text = user.nickname;
-    }
+    _loadUserData();
+    ref.read(analyticsProvider).logScreenView('profile_edit_screen');
   }
 
   @override
@@ -34,218 +31,231 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     super.dispose();
   }
 
+  void _loadUserData() {
+    final user = ref.read(authProvider).value;
+    if (user != null) {
+      _nicknameController.text = user.nickname;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).value;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0A0A),
         title: const Text(
           '프로필 수정',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.black,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
         actions: [
           TextButton(
-            onPressed: _showDeleteAccountDialog,
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey,
+            onPressed: _isLoading ? null : _saveProfile,
+            child: Text(
+              '저장',
+              style: TextStyle(
+                color: _isLoading ? Colors.grey : const Color(0xFF48FF00),
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            child: const Text('탈퇴'),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            GestureDetector(
-              onTap: _selectImage,
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: _selectedImagePath != null
-                        ? FileImage(File(_selectedImagePath!))
-                        : (user?.pictureUrl != null
-                            ? NetworkImage(user!.pictureUrl!)
-                            : null) as ImageProvider?,
-                    child:
-                        user?.pictureUrl == null && _selectedImagePath == null
-                            ? const Icon(Icons.person, size: 50)
-                            : null,
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.camera_alt, size: 20),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _nicknameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: '닉네임',
-                labelStyle: const TextStyle(color: Colors.white),
-                hintText: '새로운 닉네임을 입력하세요',
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade400),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _updateProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(),
-                      )
-                    : const Text(
-                        '저장하기',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final shouldLogout = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => Dialog(
-                      backgroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: Colors.white24),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '로그아웃',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              '정말 로그아웃 하시겠습니까?',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      side: const BorderSide(
-                                          color: Colors.white24),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: const Text('취소'),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: const Text('로그아웃'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                  if (shouldLogout == true && context.mounted) {
-                    await ref.read(authProvider.notifier).signOut();
-                    if (context.mounted) {
-                      context.go('/login');
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[50],
-                  foregroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  '로그아웃',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+            // 프로필 이미지
+            _buildProfileImage(user?.pictureUrl),
+            const SizedBox(height: 32),
+            
+            // 닉네임 입력
+            _buildNicknameInput(),
+            const SizedBox(height: 32),
+            
+            // 이메일 (읽기 전용)
+            _buildEmailField(user?.email),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileImage(String? currentImageUrl) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _selectImage,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFF48FF00),
+                width: 3,
+              ),
+            ),
+            child: ClipOval(
+              child: _getProfileImage(currentImageUrl),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextButton.icon(
+          onPressed: _selectImage,
+          icon: const Icon(Icons.camera_alt, color: Color(0xFF48FF00)),
+          label: const Text(
+            '프로필 사진 변경',
+            style: TextStyle(
+              color: Color(0xFF48FF00),
+              fontFamily: 'Pretendard',
+            ),
+          ),
+        ),
+        if (_selectedImagePath != null) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: _removeImage,
+            icon: const Icon(Icons.delete, color: Colors.red),
+            label: const Text(
+              '사진 제거',
+              style: TextStyle(
+                color: Colors.red,
+                fontFamily: 'Pretendard',
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _getProfileImage(String? imageUrl) {
+    if (_selectedImagePath != null) {
+      return Image.file(
+        File(_selectedImagePath!),
+        fit: BoxFit.cover,
+        width: 120,
+        height: 120,
+      );
+    } else if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: 120,
+        height: 120,
+        errorBuilder: (context, error, stackTrace) => _buildDefaultAvatar(),
+      );
+    } else {
+      return _buildDefaultAvatar();
+    }
+  }
+
+  Widget _buildDefaultAvatar() {
+    return Container(
+      width: 120,
+      height: 120,
+      color: const Color(0xFF1A1A1A),
+      child: const Icon(
+        Icons.person,
+        color: Colors.grey,
+        size: 60,
+      ),
+    );
+  }
+
+  Widget _buildNicknameInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '닉네임',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _nicknameController,
+          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+          decoration: InputDecoration(
+            hintText: '닉네임을 입력하세요',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Pretendard'),
+            filled: true,
+            fillColor: const Color(0xFF1A1A1A),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade800),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF48FF00)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmailField(String? email) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '이메일',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade800),
+          ),
+          child: Text(
+            email ?? '이메일 없음',
+            style: TextStyle(
+              color: Colors.grey.shade400,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '이메일은 변경할 수 없습니다',
+          style: TextStyle(
+            color: Colors.grey.shade500,
+            fontSize: 12,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+      ],
     );
   }
 
@@ -255,21 +265,19 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       final source = await showDialog<ImageSource>(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Colors.black,
+          backgroundColor: const Color(0xFF1A1A1A),
           title: const Text('이미지 선택', style: TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_library, color: Colors.white),
-                title: const Text('갤러리에서 선택',
-                    style: TextStyle(color: Colors.white)),
+                title: const Text('갤러리에서 선택', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context, ImageSource.gallery),
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt, color: Colors.white),
-                title: const Text('카메라로 촬영',
-                    style: TextStyle(color: Colors.white)),
+                title: const Text('카메라로 촬영', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
             ],
@@ -278,176 +286,73 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       );
 
       if (source != null) {
-        // 권한 체크
-        final androidInfo =
-            Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
-        final permission = source == ImageSource.camera
-            ? Platform.isAndroid
-                ? await Permission.camera.request()
-                : PermissionStatus.granted // iOS는 ImagePicker가 자동으로 처리
-            : (androidInfo?.version.sdkInt ?? 0) >= 33
-                ? await Permission.photos.request()
-                : await Permission.storage.request();
-
-        if (!permission.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('이미지를 선택하려면 권한이 필요합니다'),
-                action: Platform.isAndroid
-                    ? const SnackBarAction(
-                        label: '설정',
-                        onPressed: openAppSettings,
-                      )
-                    : null,
-              ),
-            );
-          }
-          return;
-        }
-
-        final pickedFile = await picker.pickImage(
-          source: source,
-          maxWidth: 800,
-          imageQuality: 80,
-        );
-
-        if (pickedFile != null) {
+        final image = await picker.pickImage(source: source);
+        if (image != null) {
           setState(() {
-            _selectedImagePath = pickedFile.path;
+            _selectedImagePath = image.path;
           });
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  Future<void> _updateProfile() async {
-    if (_nicknameController.text.isEmpty) {
+  void _removeImage() {
+    setState(() {
+      _selectedImagePath = null;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    if (_nicknameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('닉네임을 입력해주세요')),
+        const SnackBar(
+          content: Text('닉네임을 입력해주세요'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       await ref.read(authProvider.notifier).updateProfile(
-            nickname: _nicknameController.text,
-            imagePath: _selectedImagePath,
-          );
+        nickname: _nicknameController.text.trim(),
+        pictureUrl: _selectedImagePath,
+      );
+
       if (mounted) {
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('프로필이 업데이트되었습니다')),
+          const SnackBar(
+            content: Text('프로필이 수정되었습니다'),
+            backgroundColor: Color(0xFF48FF00),
+          ),
         );
+        context.pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(
+            content: Text('프로필 수정 중 오류가 발생했습니다: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _showDeleteAccountDialog() async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Colors.white24),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '회원 탈퇴',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '탈퇴를 하면\n지금까지 저장한 책과 메모가 모두 삭제됩니다.\n정말 탈퇴하시겠습니까?',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white24),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('아니오'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('예'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (shouldDelete == true && mounted) {
-      try {
-        await ref.read(authProvider.notifier).deleteAccount();
-        if (mounted) {
-          context.go('/login');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('회원 탈퇴 중 오류가 발생했습니다: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }

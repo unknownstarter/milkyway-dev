@@ -3,10 +3,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/repositories/memo_repository.dart';
 import '../../domain/models/memo.dart';
 import 'dart:io';
+import 'dart:developer';
 import '../../../../core/providers/supabase_client_provider.dart';
 
 final memoRepositoryProvider = Provider((ref) {
   return MemoRepository(Supabase.instance.client);
+});
+
+final memoProvider = FutureProvider.family<Memo, String>((ref, memoId) async {
+  final repository = ref.watch(memoRepositoryProvider);
+  return repository.getMemoById(memoId);
 });
 
 final bookMemosProvider =
@@ -16,7 +22,7 @@ final bookMemosProvider =
   try {
     return await repository.getBookMemos(bookId);
   } catch (e) {
-    print('Error in bookMemosProvider: $e');
+    log('Error in bookMemosProvider: $e');
     return []; // 에러가 발생해도 빈 리스트를 반환
   }
 });
@@ -73,7 +79,7 @@ final updateMemoProvider = FutureProvider.family<
         await supabase.storage.from('memo_images').remove([oldFileName]);
       }
     } catch (e) {
-      print('기존 이미지 삭제 실패: $e');
+      log('기존 이미지 삭제 실패: $e');
     }
   }
 
@@ -193,7 +199,7 @@ Future<String?> _uploadMemoImage(String filePath) async {
 
     return imageUrl;
   } catch (e) {
-    print('이미지 업로드 실패: $e');
+    log('이미지 업로드 실패: $e');
     return null;
   }
 }

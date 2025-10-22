@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
-import '../../../../core/presentation/widgets/star_background_scaffold.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/onboarding_provider.dart';
-import '../screens/book_intro_screen.dart';
-import 'package:device_info_plus/device_info_plus.dart';
+import '../../../../core/providers/analytics_provider.dart';
 
 class ProfileImageScreen extends ConsumerStatefulWidget {
   const ProfileImageScreen({super.key});
@@ -17,361 +13,333 @@ class ProfileImageScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileImageScreen> createState() => _ProfileImageScreenState();
 }
 
-class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen>
-    with WidgetsBindingObserver {
+class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
   String? _selectedImagePath;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkAndUpdatePermissions();
-    }
-  }
-
-  Future<void> _checkAndUpdatePermissions() async {
-    final androidInfo =
-        Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
-
-    final galleryStatus = (androidInfo?.version.sdkInt ?? 0) >= 33
-        ? await Permission.photos.status
-        : await Permission.storage.status;
-
-    if (mounted && galleryStatus.isGranted) {
-      // 권한이 허용되었다면 이미지 선택 다이얼로그 표시
-      _pickImage();
-    }
-  }
-
-  Future<void> _pickImage() async {
-    try {
-      final picker = ImagePicker();
-      final source = await showDialog<ImageSource>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text(
-            '이미지 선택',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: const Text(
-            '이미지를 선택하는 방법을 선택해주세요.',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, ImageSource.gallery),
-              child: const Text('갤러리'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, ImageSource.camera),
-              child: const Text('카메라'),
-            ),
-          ],
-        ),
-      );
-
-      if (source != null) {
-        // 권한 체크
-        final androidInfo =
-            Platform.isAndroid ? await DeviceInfoPlugin().androidInfo : null;
-        final permission = source == ImageSource.camera
-            ? Platform.isAndroid
-                ? await Permission.camera.request()
-                : PermissionStatus.granted // iOS는 ImagePicker가 자동으로 처리
-            : (androidInfo?.version.sdkInt ?? 0) >= 33
-                ? await Permission.photos.request()
-                : await Permission.storage.request();
-
-        if (!permission.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('이미지를 선택하려면 권한이 필요합니다'),
-                action: Platform.isAndroid
-                    ? const SnackBarAction(
-                        label: '설정',
-                        onPressed: openAppSettings,
-                      )
-                    : null,
-              ),
-            );
-          }
-          return;
-        }
-
-        final pickedFile = await picker.pickImage(
-          source: source,
-          maxWidth: 800,
-          imageQuality: 80,
-        );
-
-        if (pickedFile != null) {
-          setState(() {
-            _selectedImagePath = pickedFile.path;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleSkip() async {
-    try {
-      ref.read(onboardingProvider.notifier).nextStep();
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const BookIntroScreen()),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    ref.read(analyticsProvider).logScreenView('profile_image_screen');
   }
 
   @override
   Widget build(BuildContext context) {
-    return StarBackgroundScaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 상단 헤더
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Image.asset('assets/images/logo.png', width: 40, height: 40),
-                  Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 24,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF48FF00),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
-                  ),
-                  TextButton(
-                    onPressed: _handleSkip,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      'Skip',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                '프로필 이미지를 등록해주세요.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              // 프로필 이미지 영역
-              Center(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF48FF00),
-                      ),
-                      child: _selectedImagePath != null
-                          ? ClipOval(
-                              child: Image.file(
-                                File(_selectedImagePath!),
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : ClipOval(
-                              child: Image.asset(
-                                'assets/images/default_profile.png',
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 24),
-                    // 등록하기 버튼
-                    SizedBox(
-                      width: 160,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _pickImage,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3C19E1),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text(
-                          '등록하기',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '나중에 프로필에서 변경할 수 있어요.',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 하단 버튼 영역
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      ref.read(onboardingProvider.notifier).previousStep();
-                      context.go('/onboarding/nickname');
-                    },
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _selectedImagePath != null
-                            ? () async {
-                                try {
-                                  if (_selectedImagePath != null) {
-                                    await ref
-                                        .read(authProvider.notifier)
-                                        .updateProfile(
-                                          imagePath: _selectedImagePath,
-                                        );
-                                  }
-                                  ref
-                                      .read(onboardingProvider.notifier)
-                                      .nextStep();
-                                  if (mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const BookIntroScreen()),
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(e.toString()),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                }
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3C19E1),
-                          disabledBackgroundColor: const Color(0xFF969696),
-                          foregroundColor: Colors.white,
-                          disabledForegroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text(
-                          '저장할게요',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0A0A),
+        title: const Text(
+          '프로필 사진',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w600,
           ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            
+            // 제목
+            _buildTitle(),
+            const SizedBox(height: 40),
+            
+            // 프로필 이미지
+            _buildProfileImage(),
+            const SizedBox(height: 40),
+            
+            // 이미지 선택 버튼들
+            _buildImageButtons(),
+            const SizedBox(height: 40),
+            
+            // 건너뛰기 버튼
+            _buildSkipButton(),
+            const SizedBox(height: 20),
+            
+            // 다음 버튼
+            _buildNextButton(),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildTitle() {
+    return Column(
+      children: [
+        const Text(
+          '프로필 사진을 설정해주세요',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Pretendard',
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '나중에 언제든지 변경할 수 있습니다',
+          style: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 16,
+            fontFamily: 'Pretendard',
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileImage() {
+    return GestureDetector(
+      onTap: _selectImage,
+      child: Container(
+        width: 200,
+        height: 200,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFF48FF00),
+            width: 4,
+          ),
+        ),
+        child: ClipOval(
+          child: _getProfileImage(),
+        ),
+      ),
+    );
+  }
+
+  Widget _getProfileImage() {
+    if (_selectedImagePath != null) {
+      return Image.file(
+        File(_selectedImagePath!),
+        fit: BoxFit.cover,
+        width: 200,
+        height: 200,
+      );
+    } else {
+      return Container(
+        width: 200,
+        height: 200,
+        color: const Color(0xFF1A1A1A),
+        child: const Icon(
+          Icons.person,
+          color: Colors.grey,
+          size: 80,
+        ),
+      );
+    }
+  }
+
+  Widget _buildImageButtons() {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _selectImage,
+            icon: const Icon(Icons.photo_library, color: Colors.black),
+            label: const Text(
+              '갤러리에서 선택',
+              style: TextStyle(
+                color: Colors.black,
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF48FF00),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _takePhoto,
+            icon: const Icon(Icons.camera_alt, color: Color(0xFF48FF00)),
+            label: const Text(
+              '카메라로 촬영',
+              style: TextStyle(
+                color: Color(0xFF48FF00),
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF48FF00)),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        if (_selectedImagePath != null) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _removeImage,
+              icon: const Icon(Icons.delete, color: Colors.red),
+              label: const Text(
+                '사진 제거',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontFamily: 'Pretendard',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSkipButton() {
+    return TextButton(
+      onPressed: _isLoading ? null : _skipImage,
+      child: Text(
+        '건너뛰기',
+        style: TextStyle(
+          color: Colors.grey.shade400,
+          fontSize: 16,
+          fontFamily: 'Pretendard',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNextButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _next,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF48FF00),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(
+                color: Colors.black,
+                strokeWidth: 2,
+              )
+            : const Text(
+                '다음',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Pretendard',
+                ),
+              ),
+      ),
+    );
+  }
+
+  Future<void> _selectImage() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          _selectedImagePath = image.path;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.camera);
+      if (image != null) {
+        setState(() {
+          _selectedImagePath = image.path;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('사진 촬영 중 오류가 발생했습니다: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImagePath = null;
+    });
+  }
+
+  Future<void> _skipImage() async {
+    await _next();
+  }
+
+  Future<void> _next() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 프로필 이미지 저장
+      if (_selectedImagePath != null) {
+        await ref.read(onboardingProvider.notifier).setProfileImage(_selectedImagePath!);
+      }
+
+      // 다음 화면으로 이동
+      if (mounted) {
+        context.go('/onboarding/book-intro');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('프로필 이미지 저장 중 오류가 발생했습니다: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }
