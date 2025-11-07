@@ -2,9 +2,9 @@
 
 ## 📋 개발 가이드라인
 
-**최종 업데이트:** 2024-12-19  
+**최종 업데이트:** 2025-11-07  
 **적용 대상:** 모든 개발자  
-**버전:** 1.0.0
+**버전:** 1.1.0
 
 ## 🎯 핵심 원칙
 
@@ -64,11 +64,13 @@ features/[feature]/
 ### 색상 규칙
 ```dart
 // 주요 색상
-const Color primaryBackground = Color(0xFF0A0A0A);    // 검정
-const Color cardBackground = Color(0xFF1A1A1A);       // 다크 그레이
+const Color primaryBackground = Color(0xFF181818);    // 다크 그레이 (기본 배경)
+const Color cardBackground = Color(0xFF1A1A1A);       // 다크 그레이 (카드 배경)
+const Color navigationBarBackground = Color(0xFF2C2C2C); // 네비게이션 바 배경
 const Color accentColor = Color(0xFF48FF00);           // 형광 초록
 const Color primaryText = Color(0xFFFFFFFF);          // 흰색
 const Color secondaryText = Color(0xFF9CA3AF);        // 그레이
+const Color snackbarBackground = Color(0xFF242424);    // 스낵바 배경 (통일)
 ```
 
 ### 타이포그래피 규칙
@@ -103,6 +105,17 @@ const double buttonRadius = 12.0;
 const double smallSpacing = 8.0;
 const double mediumSpacing = 16.0;
 const double largeSpacing = 32.0;
+
+// 피그마 디자인 기반 간격 (책 상세 페이지)
+const double appBarToBookInfo = 28.0;        // 앱바와 책 정보 사이
+const double bookTitleToAuthor = 24.0;      // 책 제목과 작가 사이
+const double authorToPublisher = 2.0;       // 작가와 출판사 사이
+const double bookInfoToStatus = 32.0;        // 책 정보와 상태 버튼 사이
+const double statusToDescription = 32.0;     // 상태 버튼과 책 소개 타이틀 사이
+const double descriptionTitleToContent = 20.0; // 책 소개 타이틀과 내용 사이
+const double moreButtonToMemoTitle = 40.0;   // 더보기 버튼과 책 메모 타이틀 사이
+const double memoTitleToFilter = 20.0;      // 책 메모 타이틀과 필터 버튼 사이
+const double filterToFirstMemo = 32.0;       // 필터 버튼과 첫 번째 메모 카드 사이
 ```
 
 ## 🔧 코딩 규칙
@@ -173,7 +186,54 @@ return result;
 
 ## 📱 UI/UX 규칙
 
-### 1. 반응형 디자인
+### 0. 피그마 디자인 준수 (2025-11-07 추가)
+- **피그마 좌표 기반 간격 적용** - 모든 간격은 피그마 디자인 파일의 좌표를 기준으로 설정
+- **정확한 간격 측정** - 피그마에서 요소 간 거리를 정확히 측정하여 적용
+- **일관된 색상 사용** - 피그마에 정의된 색상 값을 정확히 사용
+- **반응형 레이아웃** - LayoutBuilder를 사용하여 화면 크기에 맞게 조정
+
+### 1. 스낵바 색상 통일 (2025-11-07 추가)
+```dart
+// ✅ 모든 스낵바는 일관된 색상 사용
+ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(
+    content: Text('메시지'),
+    backgroundColor: const Color(0xFF242424), // 통일된 색상
+  ),
+);
+```
+
+### 2. 책 소개 더보기 버튼 규칙 (2025-11-07 추가)
+```dart
+// ✅ 180자 이상일 때만 "더보기" 버튼 표시
+final shouldShowMoreButton = description.length > 180 && !_isDescriptionExpanded;
+
+// ✅ 탭 시 전체 텍스트 확장, 닫기 버튼 없음
+// ✅ 화면을 나갔다가 다시 들어오면 초기 상태로 복귀
+```
+
+### 3. 빈 상태 처리 규칙 (2025-11-07 추가)
+```dart
+// ✅ 빈 상태는 항상 가운데 정렬
+// ✅ 가능한 경우 탭 이벤트 추가 (관련 페이지로 이동)
+Widget _buildEmptyState() {
+  return Center(
+    child: GestureDetector(
+      onTap: () => context.push('/related-page'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.note_add, color: Colors.grey, size: 48),
+          SizedBox(height: 16),
+          Text('아직 메모가 없습니다'),
+        ],
+      ),
+    ),
+  );
+}
+```
+
+### 4. 반응형 디자인
 ```dart
 // 화면 크기별 대응
 Widget _buildResponsiveLayout(BuildContext context) {
@@ -454,7 +514,7 @@ cd milkyway-dev
 
 ---
 
-**문서 작성일:** 2024-12-19  
+**문서 작성일:** 2025-11-07  
 **작성자:** AI Assistant  
 **검토자:** 개발팀  
-**다음 검토 예정일:** 2025-01-19
+**다음 검토 예정일:** 2025-12-07
