@@ -1,0 +1,58 @@
+{
+  "project_info": {
+    "project_number": "394691029555",
+    "project_id": "milkyway-app-f0848",
+    "storage_bucket": "milkyway-app-f0848.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:394691029555:android:b098c6920847b687cc1146",
+        "android_client_info": {
+          "package_name": "com.whatif.milkyway.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "394691029555-j9qgm3qiurmbdm8nfc2t53a6pm209v7e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whatif.milkyway.android",
+            "certificate_hash": "a2251dee56cbea693a3caebe90dbdb93f55a82fe"
+          }
+        },
+        {
+          "client_id": "394691029555-pgoc5migv2lqo5d3d76gfoksuuh7paai.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whatif.milkyway.android",
+            "certificate_hash": "76f96181986503cdb8d4e88ef2c2288069b2ecf0"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKZw-p99fOaev-ZLpsZdsU5-ri3O5diaU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "394691029555-98k9mp6pt0fas3vktvqiaei4k45df2du.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "394691029555-cbbjdf7io2tec9004t3b31ons9r0a2g3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.whatif.milkyway"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
