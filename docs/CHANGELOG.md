@@ -3,8 +3,115 @@
 ## 📋 버전 관리
 
 **현재 버전:** 1.0.0-dev  
-**최종 업데이트:** 2025-11-07  
+**최종 업데이트:** 2025-11-11  
 **개발 상태:** 개발 중
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-11
+
+### 🏗️ 대규모 리팩토링 (Major Refactoring)
+
+#### 📦 HomeScreen 모듈화 (2025-11-11)
+- **파일 크기 대폭 감소**: 1,281줄 → 219줄 (약 83% 감소)
+- **위젯 분리 및 모듈화**:
+  - `ReadingSectionDelegate` → `widgets/reading_section_delegate.dart`
+  - `ReadingBooksSection` → `widgets/reading_books_section.dart`
+  - `HomeMemoSection` → `widgets/home_memo_section.dart`
+  - `HomeProfileSection` → `widgets/home_profile_section.dart`
+  - `HomeEmptyStates` → `widgets/home_empty_states.dart`
+- **코드 품질 향상**:
+  - 단일 책임 원칙 적용
+  - 재사용 가능한 위젯 구조
+  - 유지보수성 대폭 개선
+  - 가독성 향상
+
+#### 🐛 오버플로우 완전 제거 (2025-11-11)
+- **오버플로우 방지 강화**:
+  - `_expandedDisplayThreshold = 0.001` 추가 (거의 0일 때만 expandedChild 표시)
+  - `_transitionThreshold = 0.01` 유지 (1% 진행 시 즉시 전환)
+  - expandedChild 높이 제한 강화: `currentHeight` → `maxHeight` 사용
+  - 이중 제한 적용: 외부 `SizedBox(height: maxHeight)` + 내부 `ClipRect` + `SizedBox(height: maxHeight)`
+- **즉시 전환 메커니즘**:
+  - 스크롤 시작 시 거의 즉시 collapsedChild로 전환
+  - 전환 구간에서 오버플로우 발생 가능성 완전 제거
+
+#### 🔄 PageController 동기화 개선 (2025-11-11)
+- **스크롤 복귀 시 동기화**:
+  - 스크롤이 맨 위(10px 이내)로 돌아올 때 `selectedBookIdProvider`와 `PageController` 자동 동기화
+  - 다른 책을 선택하고 스크롤 내렸다가 다시 맨 위로 돌아와도 올바른 책 표시
+  - `ScrollController` 리스너를 통한 자동 동기화 구현
+
+#### 📊 리팩토링 통계 (2025-11-11)
+- **HomeScreen 파일 크기**: 1,281줄 → 219줄 (83% 감소)
+- **분리된 위젯 파일**: 5개
+  - `reading_section_delegate.dart`: 123줄
+  - `reading_books_section.dart`: 508줄
+  - `home_memo_section.dart`: 350줄
+  - `home_profile_section.dart`: 130줄
+  - `home_empty_states.dart`: 89줄
+- **총 코드 줄 수**: 1,281줄 → 1,419줄 (분리로 인한 약간의 증가, 하지만 모듈화로 유지보수성 대폭 향상)
+- **코드 품질**: 단일 책임 원칙 적용, 재사용성 향상
+
+### ✨ 새로운 기능 (Features)
+
+#### 👤 프로필 수정 화면 개선
+- **로그아웃 버튼 추가** - 프로필 수정 화면 하단에 로그아웃 버튼 추가
+- **로그아웃 기능 구현** - 확인 다이얼로그 후 로그아웃 처리 및 로그인 화면으로 이동
+- **타입 안전한 라우팅** - 하드코딩된 `/login` 경로를 `AppRoutes.login` 상수로 변경
+
+#### 🏠 홈 화면 개선
+- **읽고 있는 책 섹션 Sticky 헤더** - 스크롤 시 자연스러운 전환 애니메이션 구현
+  - 확장된 형태(큰 책 표지)와 축소된 형태(작은 카드) 간 부드러운 전환
+  - Figma 디자인(Frame 31) 기반 작은 카드 형태 구현
+- **공통 플로팅 액션 버튼** - Home, Books, Memos 화면에서 공통 사용하는 FAB 위젯 생성
+  - 회색 배경(`#ECECEC`)과 검은색 플러스 아이콘 적용
+  - Figma 디자인(xm9atz7n 채널) 기반 스타일 적용
+
+### 🔧 개선사항 (Improvements)
+
+#### 🐛 버그 수정
+- **작은 카드 오버플로우 문제 해결** - 반응형 레이아웃으로 변경
+  - `height: 108` → `constraints: BoxConstraints(minHeight: 108)`
+  - 책 제목 `maxLines: 1` → `maxLines: 2`
+  - 저자/출판사 텍스트를 `Flexible`로 감싸 오버플로우 방지
+- **책 스와이프 문제 해결** - PageView에 `physics: PageScrollPhysics()` 명시
+- **모든 책 표지 확대 버그 수정** - PageController 리셋 로직 개선
+  - `_hasResetPageController` 플래그로 중복 실행 방지
+  - `mounted` 체크 추가로 안전성 향상
+
+#### 🎨 UI/UX 개선
+- **오버플로우 에러 표시 개선** - 노란색/검은색 줄무늬 대신 사용자 친화적 에러 화면
+  - `ErrorWidget.builder`를 `main()` 함수에서 설정 (성능 최적화)
+  - 다크 테마에 맞춘 에러 메시지 표시
+- **로딩 스피너 색상 통일** - 모든 `CircularProgressIndicator` 색상을 밝은 회색(`#ECECEC`)으로 변경
+
+#### 📊 코드 품질 향상
+- **성능 최적화**
+  - `ErrorWidget.builder`를 `build` 메서드에서 `main()` 함수로 이동
+  - `addPostFrameCallback` 최적화로 중복 실행 방지
+- **Deprecated API 수정**
+  - `withOpacity` → `withValues(alpha: ...)`로 변경
+  - Flutter 최신 버전 호환성 향상
+- **const 생성자 최적화**
+  - 가능한 위젯에 `const` 키워드 추가
+  - 불필요한 리빌드 방지로 성능 향상
+- **타입 안전성 개선**
+  - 하드코딩된 경로를 `AppRoutes` 상수로 변경
+  - 라우팅 오류 방지
+- **안전성 향상**
+  - async gap 이후 `context` 사용 시 `mounted` 체크 추가
+  - BuildContext 사용 경고 해결
+
+#### 🧹 코드 정리
+- **중복 코드 제거** - Platform 체크 중복 제거
+- **사용하지 않는 import 제거** - `dart:io` import 제거
+
+### 📝 코드 리뷰 결과
+- **린터 오류:** 0개
+- **경고:** 0개
+- **코드 품질:** 개선됨
+- **성능:** 최적화됨
 
 ---
 
@@ -253,7 +360,7 @@ cd milkyway-dev
 
 ---
 
-**문서 작성일:** 2025-11-07  
+**문서 작성일:** 2025-11-11  
 **작성자:** AI Assistant  
 **검토자:** 개발팀  
-**다음 업데이트 예정:** 2025-11-14
+**다음 업데이트 예정:** 2025-11-18

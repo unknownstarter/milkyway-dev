@@ -246,7 +246,7 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
         ),
         child: _isLoading
             ? const CircularProgressIndicator(
-                color: Colors.black,
+                color: Color(0xFFECECEC),
                 strokeWidth: 2,
               )
             : const Text(

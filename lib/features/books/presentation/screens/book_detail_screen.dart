@@ -543,7 +543,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Center(
                   child: CircularProgressIndicator(
-                    color: Color(0xFF48FF00),
+                    color: Color(0xFFECECEC),
                   ),
                 ),
               ),
@@ -908,7 +908,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
   Widget _buildLoadingState() {
     return const Center(
       child: CircularProgressIndicator(
-        color: Color(0xFF48FF00),
+        color: Color(0xFFECECEC),
       ),
     );
   }

@@ -10,7 +10,9 @@ class UserProfileSection extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     if (authState.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFECECEC)),
+      );
     }
 
     if (authState.hasError) {

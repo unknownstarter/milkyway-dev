@@ -45,7 +45,9 @@ class _MemoListState extends ConsumerState<MemoList> {
     final memosAsync = ref.watch(paginatedMemosProvider(widget.bookId));
 
     return memosAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFECECEC)),
+      ),
       error: (err, stack) => Center(child: Text('Error: $err')),
       data: (memos) {
         if (memos.isEmpty) {
@@ -74,7 +76,9 @@ class _MemoListState extends ConsumerState<MemoList> {
                   ? const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFECECEC),
+                        ),
                       ),
                     )
                   : const SizedBox.shrink();

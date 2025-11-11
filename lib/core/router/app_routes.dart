@@ -22,6 +22,7 @@ class AppRoutes {
   static const memoCreate = '/memos/create';
   static const memoEdit = '/memos/edit';
   static const profile = '/profile';
+  static const profileEdit = '/profile/edit';
   
   // 라우트 경로 생성 헬퍼
   static String bookDetailPath(String bookId) => '$bookDetail/$bookId';
@@ -44,4 +45,5 @@ class AppRoutes {
   static const memoCreateName = 'memo-create';
   static const memoEditName = 'memo-edit';
   static const profileName = 'profile';
+  static const profileEditName = 'profile-edit';
 }

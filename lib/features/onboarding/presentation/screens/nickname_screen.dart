@@ -219,7 +219,7 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
         ),
         child: _isLoading
             ? const CircularProgressIndicator(
-                color: Colors.black,
+                color: Color(0xFFECECEC),
                 strokeWidth: 2,
               )
             : const Text(

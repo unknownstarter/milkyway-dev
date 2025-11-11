@@ -20,7 +20,9 @@ class MemoDetailScreen extends ConsumerWidget {
     return memoAsync.when(
       data: (memo) => _buildContent(context, ref, memo),
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFECECEC)),
+        ),
       ),
       error: (error, stack) => Scaffold(
         body: Center(child: Text('오류: $error')),
@@ -72,7 +74,7 @@ class MemoDetailScreen extends ConsumerWidget {
                         color: Colors.grey.shade900,
                         child: const Center(
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: Color(0xFFECECEC),
                             strokeWidth: 2,
                           ),
                         ),

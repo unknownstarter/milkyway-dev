@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:whatif_milkyway_app/features/auth/domain/entities/user.dart';
 import 'package:whatif_milkyway_app/features/auth/domain/repositories/auth_repository.dart';
@@ -10,7 +11,7 @@ import 'dart:developer';
 part 'auth_provider.g.dart';
 
 @riverpod
-AuthRepository authRepository(AuthRepositoryRef ref) {
+AuthRepository authRepository(Ref ref) {
   final analytics = ref.watch(analyticsProvider);
   return AuthRepositoryImpl(
     remoteDataSource: AuthRemoteDataSourceImpl(analytics: analytics),
@@ -32,7 +33,8 @@ class Auth extends _$Auth {
     try {
       final result = await ref.read(authRepositoryProvider).signInWithGoogle();
       await result.fold(
-        (failure) async => state = AsyncValue.error(failure, StackTrace.current),
+        (failure) async =>
+            state = AsyncValue.error(failure, StackTrace.current),
         (user) async {
           await _handleUserSignIn(user);
           final currentUser = await getCurrentUser();
@@ -49,7 +51,8 @@ class Auth extends _$Auth {
     try {
       final result = await ref.read(authRepositoryProvider).signInWithApple();
       await result.fold(
-        (failure) async => state = AsyncValue.error(failure, StackTrace.current),
+        (failure) async =>
+            state = AsyncValue.error(failure, StackTrace.current),
         (user) async {
           await _handleUserSignIn(user);
           final currentUser = await getCurrentUser();
@@ -139,10 +142,7 @@ class Auth extends _$Auth {
       if (nickname != null) updates['nickname'] = nickname;
       if (pictureUrl != null) updates['picture_url'] = pictureUrl;
 
-      await _supabase
-          .from('users')
-          .update(updates)
-          .eq('id', currentUser.id);
+      await _supabase.from('users').update(updates).eq('id', currentUser.id);
 
       // 상태 새로고침
       final updatedUser = await getCurrentUser();
@@ -159,7 +159,7 @@ class Auth extends _$Auth {
 
       // 사용자 데이터 삭제
       await _supabase.from('users').delete().eq('id', currentUser.id);
-      
+
       // 계정 삭제
       await _supabase.auth.signOut();
       state = const AsyncValue.data(null);
@@ -169,7 +169,7 @@ class Auth extends _$Auth {
   }
 
   bool get isSignedIn => _supabase.auth.currentUser != null;
-  
+
   String? get currentUserId => _supabase.auth.currentUser?.id;
 
   Future<void> checkAppVersion() async {
@@ -187,13 +187,10 @@ class Auth extends _$Auth {
       final currentUser = await getCurrentUser();
       if (currentUser == null) return;
 
-      await _supabase
-          .from('users')
-          .update({
-            'onboarding_completed': completed,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', currentUser.id);
+      await _supabase.from('users').update({
+        'onboarding_completed': completed,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', currentUser.id);
 
       // 상태 새로고침
       final updatedUser = await getCurrentUser();

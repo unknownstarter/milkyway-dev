@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/presentation/widgets/common_app_bar.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../widgets/feedback_modal.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,7 +23,9 @@ class ProfileScreen extends ConsumerWidget {
         data: (user) => user == null
             ? const Center(child: Text('로그인이 필요합니다.'))
             : _ProfileContent(user: user),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFFECECEC)),
+        ),
         error: (e, st) => Center(
           child: SelectableText.rich(
             TextSpan(
@@ -98,7 +101,7 @@ class _ProfileContent extends StatelessWidget {
                   width: double.infinity,
                   child: TextButton(
                     onPressed: () {
-                      context.go('/profile/edit');
+                      context.push(AppRoutes.profileEdit);
                     },
                     style: TextButton.styleFrom(
                       backgroundColor: Colors.grey.shade900,

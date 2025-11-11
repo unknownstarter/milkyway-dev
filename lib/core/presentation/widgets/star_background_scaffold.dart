@@ -26,10 +26,7 @@ class StarBackgroundScaffold extends StatelessWidget {
         children: [
           CustomPaint(
             painter: StarBackgroundPainter(numberOfStars: numberOfStars),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-            ),
+            child: const SizedBox.expand(),
           ),
           body,
         ],

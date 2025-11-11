@@ -10,6 +10,7 @@ import 'package:whatif_milkyway_app/features/books/presentation/screens/book_sea
 import 'package:whatif_milkyway_app/features/books/presentation/screens/book_shelf_screen.dart';
 import 'package:whatif_milkyway_app/features/memos/presentation/screens/memo_list_screen.dart';
 import 'package:whatif_milkyway_app/features/profile/presentation/screens/profile_screen.dart';
+import 'package:whatif_milkyway_app/features/profile/presentation/screens/profile_edit_screen.dart';
 import 'package:whatif_milkyway_app/features/books/presentation/screens/book_detail_screen.dart';
 import 'package:whatif_milkyway_app/features/memos/presentation/screens/memo_detail_screen.dart';
 import 'package:whatif_milkyway_app/features/memos/presentation/screens/memo_create_screen.dart';
@@ -77,6 +78,25 @@ final router = GoRouter(
       },
     ),
     
+    // 메모 작성 화면 (ShellRoute 밖 - 책 상세에서 접근용)
+    GoRoute(
+      path: AppRoutes.memoCreate,
+      name: '${AppRoutes.memoCreateName}-standalone',
+      builder: (context, state) {
+        final bookId = state.uri.queryParameters['bookId'];
+        return MemoCreateScreen(
+          bookId: bookId,
+        );
+      },
+    ),
+    
+    // 프로필 수정 화면 (ShellRoute 밖 - 하단 네비게이션바 없음)
+    GoRoute(
+      path: AppRoutes.profileEdit,
+      name: AppRoutes.profileEditName,
+      builder: (context, state) => const ProfileEditScreen(),
+    ),
+    
     // 메인 앱 Shell (BottomNavigationBar 포함)
     ShellRoute(
       builder: (context, state, child) => MainShell(
@@ -127,7 +147,12 @@ final router = GoRouter(
         GoRoute(
           path: AppRoutes.memoCreate,
           name: AppRoutes.memoCreateName,
-          builder: (context, state) => const MemoCreateScreen(),
+          builder: (context, state) {
+            final bookId = state.uri.queryParameters['bookId'];
+            return MemoCreateScreen(
+              bookId: bookId,
+            );
+          },
         ),
         GoRoute(
           path: '${AppRoutes.memoEdit}/:id',

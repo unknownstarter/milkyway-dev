@@ -13,7 +13,9 @@ class RecentBooksSection extends ConsumerWidget {
     final booksAsync = ref.watch(recentBooksProvider);
 
     return booksAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFECECEC)),
+      ),
       error: (err, stack) => Center(child: Text('Error: $err')),
       data: (books) {
         if (books.isEmpty) {

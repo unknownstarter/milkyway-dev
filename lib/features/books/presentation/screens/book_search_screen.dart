@@ -228,7 +228,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
   Widget _buildLoadingState() {
     return const Center(
       child: CircularProgressIndicator(
-        color: Color(0xFF48FF00),
+        color: Color(0xFFECECEC),
       ),
     );
   }

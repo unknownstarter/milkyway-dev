@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/providers/analytics_provider.dart';
+import '../../../../core/router/app_routes.dart';
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key});
@@ -86,6 +87,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             
             // 이메일 (읽기 전용)
             _buildEmailField(user?.email),
+            const SizedBox(height: 40),
+            
+            // 로그아웃 버튼
+            _buildLogoutButton(),
           ],
         ),
       ),
@@ -287,19 +292,21 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
       if (source != null) {
         final image = await picker.pickImage(source: source);
-        if (image != null) {
+        if (image != null && mounted) {
           setState(() {
             _selectedImagePath = image.path;
           });
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
-          backgroundColor: const Color(0xFF242424),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
+            backgroundColor: const Color(0xFF242424),
+          ),
+        );
+      }
     }
   }
 
@@ -307,6 +314,83 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     setState(() {
       _selectedImagePath = null;
     });
+  }
+
+  Widget _buildLogoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton(
+        onPressed: _logout,
+        style: TextButton.styleFrom(
+          backgroundColor: Colors.red.shade900.withValues(alpha: 0.3),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.red.shade700, width: 1),
+          ),
+        ),
+        child: const Text(
+          '로그아웃',
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          '로그아웃',
+          style: TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+        ),
+        content: const Text(
+          '정말 로그아웃 하시겠습니까?',
+          style: TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              '취소',
+              style: TextStyle(color: Colors.grey, fontFamily: 'Pretendard'),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              '로그아웃',
+              style: TextStyle(color: Colors.red, fontFamily: 'Pretendard'),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout != true) return;
+
+    try {
+      await ref.read(authProvider.notifier).signOut();
+      if (mounted) {
+        context.go(AppRoutes.login);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('로그아웃 중 오류가 발생했습니다: $e'),
+            backgroundColor: const Color(0xFF242424),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveProfile() async {

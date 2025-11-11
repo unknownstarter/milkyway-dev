@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -82,19 +84,19 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
             // 책 선택
             _buildBookSelector(),
             const SizedBox(height: 20),
-            
+
             // 페이지 입력
             _buildPageInput(),
             const SizedBox(height: 20),
-            
+
             // 메모 내용
             _buildContentInput(),
             const SizedBox(height: 20),
-            
+
             // 이미지 선택
             _buildImageSelector(),
             const SizedBox(height: 20),
-            
+
             // 선택된 이미지
             if (_selectedImagePath != null) _buildSelectedImage(),
           ],
@@ -105,7 +107,7 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
 
   Widget _buildBookSelector() {
     final booksAsync = ref.watch(userBooksProvider);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -121,7 +123,8 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
         const SizedBox(height: 8),
         booksAsync.when(
           data: (books) => _buildBookDropdown(books),
-          loading: () => const CircularProgressIndicator(color: Color(0xFF48FF00)),
+          loading: () =>
+              const CircularProgressIndicator(color: Color(0xFFECECEC)),
           error: (error, stack) => Text(
             '책 목록을 불러올 수 없습니다: $error',
             style: const TextStyle(color: Colors.red, fontFamily: 'Pretendard'),
@@ -182,7 +185,8 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
           style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
           decoration: InputDecoration(
             hintText: '예: 42',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Pretendard'),
+            hintStyle: TextStyle(
+                color: Colors.grey.shade400, fontFamily: 'Pretendard'),
             filled: true,
             fillColor: const Color(0xFF1A1A1A),
             border: OutlineInputBorder(
@@ -223,7 +227,8 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
           style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
           decoration: InputDecoration(
             hintText: '읽은 내용이나 생각을 적어보세요...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Pretendard'),
+            hintStyle: TextStyle(
+                color: Colors.grey.shade400, fontFamily: 'Pretendard'),
             filled: true,
             fillColor: const Color(0xFF1A1A1A),
             border: OutlineInputBorder(
@@ -263,7 +268,8 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _selectImage,
-                icon: const Icon(Icons.add_photo_alternate, color: Color(0xFF48FF00)),
+                icon: const Icon(Icons.add_photo_alternate,
+                    color: Color(0xFF48FF00)),
                 label: const Text(
                   '이미지 추가',
                   style: TextStyle(
@@ -336,34 +342,78 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_library, color: Colors.white),
-                title: const Text('갤러리에서 선택', style: TextStyle(color: Colors.white)),
+                title: const Text('갤러리에서 선택',
+                    style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context, ImageSource.gallery),
               ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.white),
-                title: const Text('카메라로 촬영', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Colors.white),
+                  title: const Text('카메라로 촬영',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
             ],
           ),
         ),
       );
 
       if (source != null) {
-        final image = await picker.pickImage(source: source);
-        if (image != null) {
-          setState(() {
-            _selectedImagePath = image.path;
-          });
+        try {
+          final image = await picker.pickImage(
+            source: source,
+            imageQuality: 85,
+          );
+          if (image != null) {
+            setState(() {
+              _selectedImagePath = image.path;
+            });
+          }
+        } on PlatformException catch (e) {
+          if (mounted) {
+            String errorMessage = '카메라 접근 중 오류가 발생했습니다';
+            if (e.code == 'camera_access_denied') {
+              errorMessage = '카메라 접근 권한이 거부되었습니다';
+            } else if (e.code == 'camera_unavailable') {
+              errorMessage = '카메라를 사용할 수 없습니다\n(시뮬레이터에서는 카메라를 사용할 수 없습니다)';
+            } else if (e.message != null && e.message!.isNotEmpty) {
+              errorMessage = '카메라 오류: ${e.message}';
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMessage),
+                backgroundColor: const Color(0xFF242424),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        } catch (e) {
+          // PlatformException이 아닌 다른 예외 처리 (크래시 방지)
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  '카메라를 사용할 수 없습니다\n(시뮬레이터에서는 카메라를 사용할 수 없습니다)',
+                ),
+                backgroundColor: Color(0xFF242424),
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
-          backgroundColor: const Color(0xFF242424),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '이미지 선택 중 오류가 발생했습니다: ${e.toString()}',
+            ),
+            backgroundColor: const Color(0xFF242424),
+          ),
+        );
+      }
     }
   }
 
@@ -403,11 +453,13 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
         throw Exception('책을 선택해주세요');
       }
       await ref.read(memoFormProvider(_selectedBookId!).notifier).createMemo(
-        bookId: _selectedBookId!,
-        content: _contentController.text.trim(),
-        page: _pageController.text.isNotEmpty ? int.tryParse(_pageController.text) : null,
-        imageUrl: _selectedImagePath,
-      );
+            bookId: _selectedBookId!,
+            content: _contentController.text.trim(),
+            page: _pageController.text.isNotEmpty
+                ? int.tryParse(_pageController.text)
+                : null,
+            imageUrl: _selectedImagePath,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

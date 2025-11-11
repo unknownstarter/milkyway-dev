@@ -15,5 +15,5 @@ class NetworkFailure extends Failure {}
 
 class AuthFailure extends Failure {
   final String? message;
-  AuthFailure([this.message]);
+  const AuthFailure([this.message]);
 }

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import 'dart:io' show Platform;
 import '../widgets/auth_background_layout.dart';
-import 'package:flutter/rendering.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -159,7 +158,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   height: 56,
                   child: authState.isLoading
                       ? const Center(
-                          child: CircularProgressIndicator(color: Colors.white))
+                          child: CircularProgressIndicator(
+                            color: Color(0xFFECECEC),
+                          ))
                       : ElevatedButton(
                           onPressed: () => ref
                               .read(authProvider.notifier)
