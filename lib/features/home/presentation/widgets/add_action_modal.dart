@@ -35,7 +35,7 @@ class AddActionModal extends StatelessWidget {
           ),
           onTap: () {
             Navigator.pop(context);
-            context.go('/books/search');
+            context.push('/books/search');
           },
         ),
         ListTile(

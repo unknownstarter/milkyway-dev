@@ -12,11 +12,13 @@ import '../../../home/domain/models/book.dart';
 class BookDetailScreen extends ConsumerStatefulWidget {
   final String bookId;
   final bool isFromRegistration;
+  final bool isFromOnboarding;
 
   const BookDetailScreen({
     super.key,
     required this.bookId,
     this.isFromRegistration = false,
+    this.isFromOnboarding = false,
   });
 
   @override
@@ -46,8 +48,11 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            if (widget.isFromRegistration) {
-              // 책 등록 후 진입한 경우 홈으로 이동
+            if (widget.isFromOnboarding) {
+              // 온보딩을 통해 책 검색 → 책 저장 → 책 상세로 온 경우 홈으로 이동
+              context.go('/home');
+            } else if (widget.isFromRegistration) {
+              // 일반적으로 책 등록 후 진입한 경우 홈으로 이동
               context.go('/home');
             } else {
               // 일반적인 경우 이전 페이지로 이동

@@ -62,7 +62,10 @@ final router = GoRouter(
     GoRoute(
       path: AppRoutes.bookSearch,
       name: AppRoutes.bookSearchName,
-      builder: (context, state) => const BookSearchScreen(),
+      builder: (context, state) {
+        final isFromOnboarding = state.uri.queryParameters['isFromOnboarding'] == 'true';
+        return BookSearchScreen(isFromOnboarding: isFromOnboarding);
+      },
     ),
     
     // 책 상세 화면 (하단 네비게이션바 없음)
@@ -71,9 +74,11 @@ final router = GoRouter(
       name: AppRoutes.bookDetailName,
       builder: (context, state) {
         final isFromRegistration = state.uri.queryParameters['isFromRegistration'] == 'true';
+        final isFromOnboarding = state.uri.queryParameters['isFromOnboarding'] == 'true';
         return BookDetailScreen(
           bookId: state.pathParameters['id']!,
           isFromRegistration: isFromRegistration,
+          isFromOnboarding: isFromOnboarding,
         );
       },
     ),
@@ -108,9 +113,12 @@ final router = GoRouter(
         GoRoute(
           path: AppRoutes.home,
           name: AppRoutes.homeName,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: HomeScreen(),
-          ),
+          pageBuilder: (context, state) {
+            final autoBookSearch = state.uri.queryParameters['autoBookSearch'] == 'true';
+            return NoTransitionPage(
+              child: HomeScreen(autoBookSearch: autoBookSearch),
+            );
+          },
         ),
         
         // 책 관련 화면들

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/models/book.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
 import '../providers/selected_book_provider.dart';
@@ -11,7 +12,12 @@ import '../widgets/home_profile_section.dart';
 import '../widgets/home_empty_states.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
+  final bool autoBookSearch;
+
+  const HomeScreen({
+    super.key,
+    this.autoBookSearch = false,
+  });
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -52,6 +58,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         });
       }
     });
+
+    // 온보딩에서 온 경우 자동으로 책 검색 화면으로 이동
+    if (widget.autoBookSearch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.push('/books/search?isFromOnboarding=true');
+        }
+      });
+    }
   }
 
   // 스크롤 변경 시 호출: 맨 위로 돌아올 때 PageController 동기화

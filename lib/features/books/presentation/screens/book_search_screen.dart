@@ -8,7 +8,12 @@ import '../../domain/models/naver_book.dart';
 import '../../../../core/providers/analytics_provider.dart';
 
 class BookSearchScreen extends ConsumerStatefulWidget {
-  const BookSearchScreen({super.key});
+  final bool isFromOnboarding;
+
+  const BookSearchScreen({
+    super.key,
+    this.isFromOnboarding = false,
+  });
 
   @override
   ConsumerState<BookSearchScreen> createState() => _BookSearchScreenState();
@@ -43,6 +48,17 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
     });
   }
 
+  void _handleBackButton(BuildContext context) {
+    // 이전 페이지로 돌아갈 수 있는지 확인
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      // 이전 페이지가 없으면 무조건 홈으로 이동
+      // (책 검색 화면은 온보딩 완료 후에만 접근 가능)
+      context.go('/home');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchBooksProvider);
@@ -61,7 +77,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          onPressed: () => _handleBackButton(context),
         ),
       ),
       body: Column(
@@ -367,8 +383,9 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
             backgroundColor: Color(0xFF242424),
           ),
         );
-        // 책 상세 페이지로 이동 (등록 플래그 포함)
-        context.push('/books/detail/$bookId?isFromRegistration=true');
+        // 책 상세 페이지로 이동 (등록 플래그 및 온보딩 플래그 포함)
+        final queryParams = 'isFromRegistration=true${widget.isFromOnboarding ? '&isFromOnboarding=true' : ''}';
+        context.push('/books/detail/$bookId?$queryParams');
       }
     } catch (e) {
       if (mounted) {
@@ -393,8 +410,9 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
               backgroundColor: Color(0xFF242424),
             ),
           );
-          // 책 상세 페이지로 이동 (등록 플래그 포함)
-          context.push('/books/detail/${book.id}?isFromRegistration=true');
+          // 책 상세 페이지로 이동 (등록 플래그 및 온보딩 플래그 포함)
+          final queryParams = 'isFromRegistration=true${widget.isFromOnboarding ? '&isFromOnboarding=true' : ''}';
+          context.push('/books/detail/${book.id}?$queryParams');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
