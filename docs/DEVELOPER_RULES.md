@@ -589,6 +589,76 @@ void _onScrollChanged() {
 - [ ] 오버플로우가 발생하지 않는가?
 - [ ] 상태 동기화가 올바르게 작동하는가?
 
+## 🧭 네비게이션 플로우 규칙 (2025-11-11 추가)
+
+### 1. 온보딩 플로우 처리
+```dart
+// ✅ 좋은 예: 온보딩 플래그를 쿼리 파라미터로 전달
+// 온보딩 완료 후
+context.go('/home?autoBookSearch=true');
+
+// 홈 화면에서 자동 책 검색 화면으로 이동
+if (widget.autoBookSearch) {
+  context.push('/books/search?isFromOnboarding=true');
+}
+
+// 책 검색 화면에서 책 상세로 이동
+context.push('/books/detail/$bookId?isFromRegistration=true&isFromOnboarding=true');
+```
+
+### 2. 뒤로가기 로직 규칙
+```dart
+// ✅ 좋은 예: 플래그에 따라 적절한 네비게이션 처리
+onPressed: () {
+  if (widget.isFromOnboarding) {
+    // 온보딩 플로우: 홈으로 이동
+    context.go('/home');
+  } else if (widget.isFromRegistration) {
+    // 일반 등록 플로우: 홈으로 이동
+    context.go('/home');
+  } else {
+    // 일반적인 경우: 이전 페이지로 이동
+    context.pop();
+  }
+}
+
+// ❌ 나쁜 예: 항상 pop()만 사용
+onPressed: () => context.pop(); // 온보딩 플로우에서 문제 발생
+```
+
+### 3. 플래그 전달 체인
+- **온보딩 플로우**: `온보딩 → 홈(autoBookSearch) → 책 검색(isFromOnboarding) → 책 상세(isFromOnboarding)`
+- **일반 등록 플로우**: `책 검색 → 책 상세(isFromRegistration)`
+- **일반 조회 플로우**: `홈/책장 → 책 상세 (플래그 없음)`
+
+### 4. 쿼리 파라미터 처리 규칙
+```dart
+// ✅ 좋은 예: 라우터에서 쿼리 파라미터 파싱
+GoRoute(
+  path: '/books/search',
+  builder: (context, state) {
+    final isFromOnboarding = state.uri.queryParameters['isFromOnboarding'] == 'true';
+    return BookSearchScreen(isFromOnboarding: isFromOnboarding);
+  },
+)
+
+// ✅ 좋은 예: 플래그를 다음 화면으로 전달
+final queryParams = 'isFromRegistration=true${widget.isFromOnboarding ? '&isFromOnboarding=true' : ''}';
+context.push('/books/detail/$bookId?$queryParams');
+```
+
+### 5. 네비게이션 메서드 선택 규칙
+- **`context.go()`**: 스택을 교체하고 싶을 때 (홈으로 이동, 로그인 화면 등)
+- **`context.push()`**: 스택에 추가하고 싶을 때 (책 상세, 메모 작성 등)
+- **`context.pop()`**: 이전 페이지로 돌아갈 때 (뒤로가기)
+
+### 6. 네비게이션 체크리스트
+새로운 화면을 추가할 때 다음을 확인하세요:
+- [ ] 뒤로가기 로직이 올바른가?
+- [ ] 플래그가 필요한 경우 전달되는가?
+- [ ] 온보딩 플로우와 일반 플로우가 구분되는가?
+- [ ] `context.go()`와 `context.push()`를 올바르게 사용하는가?
+
 ---
 
 **문서 작성일:** 2025-11-11  
