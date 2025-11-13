@@ -1,3 +1,5 @@
+import 'book_status.dart';
+
 class Book {
   final String id;
   final String title;
@@ -6,7 +8,7 @@ class Book {
   final String? description;
   final String? publisher;
   final String? pubdate;
-  final String status;
+  final BookStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String isbn;
@@ -19,7 +21,7 @@ class Book {
     this.description,
     this.publisher,
     this.pubdate,
-    this.status = '읽고 싶은',
+    this.status = BookStatus.wantToRead,
     required this.createdAt,
     required this.updatedAt,
     required this.isbn,
@@ -34,7 +36,7 @@ class Book {
       description: json['description'],
       publisher: json['publisher'],
       pubdate: json['pubdate'],
-      status: json['status'] ?? '읽고 싶은',
+      status: BookStatus.fromString(json['status']),
       createdAt: DateTime.parse(
           json['created_at'] ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(

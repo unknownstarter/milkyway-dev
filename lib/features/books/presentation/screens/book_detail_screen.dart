@@ -8,6 +8,8 @@ import '../../../memos/domain/models/memo.dart';
 import '../../../../core/providers/analytics_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../home/domain/models/book.dart';
+import '../../../home/domain/models/book_status.dart';
+import '../../../memos/domain/models/memo_filter.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
   final String bookId;
@@ -26,8 +28,8 @@ class BookDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
-  String? _selectedStatus;
-  String _selectedFilter = '모든 메모';
+  BookStatus? _selectedStatus;
+  MemoFilter _selectedFilter = MemoFilter.all;
   bool _isDescriptionExpanded = false;
 
   @override
@@ -278,37 +280,37 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       child: Row(
         children: [
           _buildStatusButton(
-            label: '읽고 싶은',
-            isActive: (_selectedStatus ?? '읽고 싶은') == '읽고 싶은',
+            label: BookStatus.wantToRead.value,
+            isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.wantToRead,
             onTap: () {
               setState(() {
-                _selectedStatus = '읽고 싶은';
+                _selectedStatus = BookStatus.wantToRead;
               });
-              _changeStatus(book, '읽고 싶은');
+              _changeStatus(book, BookStatus.wantToRead);
             },
             width: 90,
           ),
           const SizedBox(width: 12),
           _buildStatusButton(
-            label: '읽는 중',
-            isActive: (_selectedStatus ?? '읽고 싶은') == '읽는 중',
+            label: BookStatus.reading.value,
+            isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.reading,
             onTap: () {
               setState(() {
-                _selectedStatus = '읽는 중';
+                _selectedStatus = BookStatus.reading;
               });
-              _changeStatus(book, '읽는 중');
+              _changeStatus(book, BookStatus.reading);
             },
             width: 90,
           ),
           const SizedBox(width: 12),
           _buildStatusButton(
-            label: '완독',
-            isActive: (_selectedStatus ?? '읽고 싶은') == '완독',
+            label: BookStatus.completed.value,
+            isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.completed,
             onTap: () {
               setState(() {
-                _selectedStatus = '완독';
+                _selectedStatus = BookStatus.completed;
               });
-              _changeStatus(book, '완독');
+              _changeStatus(book, BookStatus.completed);
             },
             width: 72,
           ),
@@ -436,22 +438,22 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       child: Row(
         children: [
           _buildFilterButton(
-            label: '내가 쓴',
-            isActive: _selectedFilter == '내가 쓴',
+            label: MemoFilter.myMemos.label,
+            isActive: _selectedFilter == MemoFilter.myMemos,
             onTap: () {
               setState(() {
-                _selectedFilter = '내가 쓴';
+                _selectedFilter = MemoFilter.myMemos;
               });
             },
             width: 90,
           ),
           const SizedBox(width: 12),
           _buildFilterButton(
-            label: '모든 메모',
-            isActive: _selectedFilter == '모든 메모',
+            label: MemoFilter.all.label,
+            isActive: _selectedFilter == MemoFilter.all,
             onTap: () {
               setState(() {
-                _selectedFilter = '모든 메모';
+                _selectedFilter = MemoFilter.all;
               });
             },
             width: 104,
@@ -525,11 +527,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
             return memosAsyncValue.when(
               data: (memos) {
                 // 필터링된 메모
-                final filteredMemos = _selectedFilter == '내가 쓴'
-                    ? memos
-                        .where((memo) => memo.userId == currentUserId)
-                        .toList()
-                    : memos;
+                final filteredMemos = _selectedFilter.filterMemos(memos, currentUserId);
 
                 if (filteredMemos.isEmpty) {
                   return _buildEmptyMemos();
@@ -952,7 +950,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
     );
   }
 
-  Future<void> _changeStatus(Book book, String newStatus) async {
+  Future<void> _changeStatus(Book book, BookStatus newStatus) async {
     try {
       await ref
           .read(bookDetailProvider(widget.bookId).notifier)
@@ -960,7 +958,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('상태를 "$newStatus"로 변경했습니다'),
+            content: Text('상태를 "${newStatus.value}"로 변경했습니다'),
             backgroundColor: const Color(0xFF242424),
           ),
         );

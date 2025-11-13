@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/memo.dart';
+import '../../domain/models/memo_visibility.dart';
 import 'dart:developer';
 
 class MemoRepository {
@@ -62,7 +63,7 @@ class MemoRepository {
       'content': content,
       'page': page,
       'image_url': imageUrl,
-      'visibility': 'private',
+      'visibility': MemoVisibility.private.value,
       'created_at': DateTime.now().toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
     });

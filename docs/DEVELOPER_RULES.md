@@ -4,7 +4,7 @@
 
 **최종 업데이트:** 2025-11-11  
 **적용 대상:** 모든 개발자  
-**버전:** 1.2.0
+**버전:** 1.3.0
 
 ## 🎯 핵심 원칙
 
@@ -588,6 +588,74 @@ void _onScrollChanged() {
 - [ ] 단일 책임 원칙을 준수하는가?
 - [ ] 오버플로우가 발생하지 않는가?
 - [ ] 상태 동기화가 올바르게 작동하는가?
+
+## 🔒 Enum 타입 안전성 규칙 (2025-11-11 추가)
+
+### 1. Enum 사용 원칙
+```dart
+// ✅ 좋은 예: enum 사용
+enum BookStatus {
+  wantToRead('읽고 싶은'),
+  reading('읽는 중'),
+  completed('완독');
+  
+  final String value;
+  const BookStatus(this.value);
+  
+  static BookStatus fromString(String? value) {
+    if (value == null) return BookStatus.wantToRead;
+    return BookStatus.values.firstWhere(
+      (status) => status.value == value,
+      orElse: () => BookStatus.wantToRead,
+    );
+  }
+  
+  String toJson() => value;
+}
+
+// ❌ 나쁜 예: String 하드코딩
+final String status = '읽고 싶은';
+if (status == '읽는 중') { ... }
+```
+
+### 2. Enum 변환 규칙
+- **DB에서 읽을 때**: `fromString(String?)` 사용 (null 처리 포함)
+- **DB에 저장할 때**: `.value` 또는 `toJson()` 사용
+- **기본값 처리**: 알 수 없는 값은 적절한 기본값 반환
+
+### 3. Extension 메서드 활용
+```dart
+// ✅ 좋은 예: 필터링 로직을 enum extension에 포함
+extension MemoFilterExtension on MemoFilter {
+  List<Memo> filterMemos(List<Memo> memos, String? currentUserId) {
+    switch (this) {
+      case MemoFilter.myMemos:
+        if (currentUserId == null) return [];
+        return memos.where((memo) => memo.userId == currentUserId).toList();
+      case MemoFilter.all:
+        return memos;
+    }
+  }
+}
+
+// ❌ 나쁜 예: 필터링 로직이 화면에 하드코딩
+final filteredMemos = _selectedFilter == MemoFilter.myMemos
+    ? memos.where((memo) => memo.userId == currentUserId).toList()
+    : memos;
+```
+
+### 4. Enum 일관성 규칙
+- **모든 enum은 동일한 패턴 사용**: `fromString(String?)`, `toJson()`
+- **null 안전성**: 모든 `fromString` 메서드는 nullable 파라미터 사용
+- **기본값 처리**: null 또는 알 수 없는 값에 대한 기본값 반환
+
+### 5. Enum 체크리스트
+새로운 enum을 추가할 때 다음을 확인하세요:
+- [ ] `fromString(String?)` 메서드가 구현되었는가?
+- [ ] `toJson()` 또는 `.value` getter가 있는가?
+- [ ] null 처리와 기본값 처리가 적절한가?
+- [ ] 하드코딩된 문자열이 모두 enum으로 교체되었는가?
+- [ ] DB 저장 시 `.value` 또는 `toJson()`을 사용하는가?
 
 ## 🧭 네비게이션 플로우 규칙 (2025-11-11 추가)
 

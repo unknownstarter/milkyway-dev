@@ -1,3 +1,5 @@
+import 'memo_visibility.dart';
+
 class Memo {
   final String id;
   final String userId;
@@ -6,7 +8,7 @@ class Memo {
   final int? page;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  final String visibility;
+  final MemoVisibility visibility;
   final String bookTitle;
   final Map<String, dynamic> books;
   final String? imageUrl;
@@ -42,7 +44,7 @@ class Memo {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
-      visibility: json['visibility'],
+      visibility: MemoVisibility.fromString(json['visibility']),
       bookTitle: json['books']['title'],
       books: json['books'] as Map<String, dynamic>,
       imageUrl: json['image_url'],

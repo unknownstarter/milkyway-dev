@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../home/domain/models/book.dart';
+import '../../../home/domain/models/book_status.dart';
 
 class BookGridItem extends StatelessWidget {
   final Book book;
@@ -75,17 +76,17 @@ class BookGridItem extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: book.status == '읽고 싶은'
+                      color: book.status == BookStatus.wantToRead
                           ? const Color(0xFFF33E3E)
-                          : book.status == '읽는 중'
+                          : book.status == BookStatus.reading
                               ? const Color(0xFFF0B000)
-                              : book.status == '완독'
+                              : book.status == BookStatus.completed
                                   ? const Color(0xFF0410F1)
                                   : Colors.grey,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      book.status,
+                      book.status.value,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,

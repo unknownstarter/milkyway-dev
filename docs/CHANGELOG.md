@@ -10,6 +10,55 @@
 
 ## 🚀 [1.0.0-dev] - 2025-11-11
 
+### 🔒 타입 안전성 개선: Enum 적용 (2025-11-11)
+
+#### BookStatus enum 도입
+- **String → enum 변경**: 책 읽기 상태를 `BookStatus` enum으로 변경
+- **타입 안전성 향상**: 하드코딩된 문자열(`'읽고 싶은'`, `'읽는 중'`, `'완독'`) 제거
+- **하위 호환성**: 기존 DB 데이터 자동 변환 (`fromString()` 메서드)
+- **변환 로직**: `fromString(String?)`, `toJson()` 메서드 구현
+- **수정된 파일**:
+  - `lib/features/home/domain/models/book_status.dart` (신규 생성)
+  - `lib/features/home/domain/models/book.dart`
+  - `lib/features/books/presentation/screens/book_detail_screen.dart`
+  - `lib/features/books/presentation/widgets/book_grid_item.dart`
+  - `lib/features/books/presentation/providers/book_detail_provider.dart`
+  - `lib/features/home/data/repositories/book_repository.dart`
+
+#### MemoVisibility enum 도입
+- **String → enum 변경**: 메모 공개 여부를 `MemoVisibility` enum으로 변경
+- **DB enum과 일치**: Supabase의 `visibility_type` enum과 매핑
+- **타입 안전성 향상**: 하드코딩된 문자열(`'private'`, `'public'`) 제거
+- **수정된 파일**:
+  - `lib/features/memos/domain/models/memo_visibility.dart` (신규 생성)
+  - `lib/features/memos/domain/models/memo.dart`
+  - `lib/features/memos/data/repositories/memo_repository.dart`
+
+#### MemoFilter enum 도입
+- **UI 필터 enum 생성**: 메모 필터링을 위한 `MemoFilter` enum 생성
+- **Extension 메서드 추가**: 필터링 로직을 enum에 포함하여 확장성 향상
+- **중앙 집중 관리**: 필터링 로직이 한 곳에 집중되어 유지보수성 향상
+- **수정된 파일**:
+  - `lib/features/memos/domain/models/memo_filter.dart` (신규 생성)
+  - `lib/features/books/presentation/screens/book_detail_screen.dart`
+
+#### Provider 동기화 개선
+- **userBooksProvider invalidate 추가**: 책 상세에서 상태 변경 시 Books 스크린 자동 갱신
+- **문제 해결**: 책 상세에서 읽기 상태 변경 후 Books 스크린에 반영되지 않던 문제 해결
+
+#### 코드 일관성 및 최적화
+- **일관된 패턴**: BookStatus와 MemoVisibility의 `fromString()` 메서드 일관성 통일 (nullable)
+- **중복 제거**: Book.fromJson에서 불필요한 fallback 제거
+- **문서화 개선**: MemoFilter extension 메서드 문서화 강화
+
+#### Supabase 변경 없음
+- **DB 스키마 유지**: 모든 변경사항은 Flutter 앱 코드만 수정
+- **하위 호환성**: 기존 DB 데이터 자동 변환으로 마이그레이션 불필요
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-11 (이전)
+
 ### 🧭 네비게이션 플로우 개선 (2025-11-11)
 
 #### 온보딩 플로우 개선

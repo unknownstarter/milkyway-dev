@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/book.dart';
+import '../../domain/models/book_status.dart';
 import '../../../memos/domain/models/memo.dart';
 import 'dart:developer';
 
@@ -149,19 +150,19 @@ class BookRepository {
   Future<void> createUserBook({
     required String bookId,
     required String userId,
-    required String status,
+    required BookStatus status,
   }) async {
     await _client.from('user_books').insert({
       'book_id': bookId,
       'user_id': userId,
-      'status': status,
+      'status': status.value,
     });
   }
 
-  Future<void> updateBookStatus(String bookId, String status) async {
+  Future<void> updateBookStatus(String bookId, BookStatus status) async {
     await _client
         .from('user_books')
-        .update({'status': status})
+        .update({'status': status.value})
         .eq('book_id', bookId)
         .eq('user_id', _client.auth.currentUser!.id);
   }
@@ -185,7 +186,7 @@ class BookRepository {
     await _client.from('user_books').insert({
       'book_id': bookId,
       'user_id': userId,
-      'status': '읽고 싶은',
+      'status': BookStatus.wantToRead.value,
     });
   }
 
