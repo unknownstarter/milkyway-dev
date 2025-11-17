@@ -6,6 +6,7 @@ import '../providers/book_detail_provider.dart';
 import '../../../memos/presentation/providers/memo_provider.dart';
 import '../../../memos/domain/models/memo.dart';
 import '../../../../core/providers/analytics_provider.dart';
+import '../../../../core/presentation/widgets/pill_filter_button.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../home/domain/models/book.dart';
 import '../../../home/domain/models/book_status.dart';
@@ -279,7 +280,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          _buildStatusButton(
+          PillFilterButton(
             label: BookStatus.wantToRead.value,
             isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.wantToRead,
             onTap: () {
@@ -289,9 +290,12 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               _changeStatus(book, BookStatus.wantToRead);
             },
             width: 90,
+            fontSize: 16,
+            activeFontWeight: FontWeight.w400,
+            inactiveFontWeight: FontWeight.w400,
           ),
           const SizedBox(width: 12),
-          _buildStatusButton(
+          PillFilterButton(
             label: BookStatus.reading.value,
             isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.reading,
             onTap: () {
@@ -301,9 +305,12 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               _changeStatus(book, BookStatus.reading);
             },
             width: 90,
+            fontSize: 16,
+            activeFontWeight: FontWeight.w400,
+            inactiveFontWeight: FontWeight.w400,
           ),
           const SizedBox(width: 12),
-          _buildStatusButton(
+          PillFilterButton(
             label: BookStatus.completed.value,
             isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.completed,
             onTap: () {
@@ -313,39 +320,11 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               _changeStatus(book, BookStatus.completed);
             },
             width: 72,
+            fontSize: 16,
+            activeFontWeight: FontWeight.w400,
+            inactiveFontWeight: FontWeight.w400,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatusButton({
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-    required double width,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: width,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF3C3C3C) : const Color(0xFF212121),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : const Color(0xFF6A6A6A),
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w400,
-              fontSize: 16,
-              height: 24 / 16,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -438,7 +417,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          _buildFilterButton(
+          PillFilterButton(
             label: MemoFilter.myMemos.label,
             isActive: _selectedFilter == MemoFilter.myMemos,
             onTap: () {
@@ -447,9 +426,12 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               });
             },
             width: 90,
+            fontSize: 16,
+            activeFontWeight: FontWeight.w400,
+            inactiveFontWeight: FontWeight.w400,
           ),
           const SizedBox(width: 12),
-          _buildFilterButton(
+          PillFilterButton(
             label: MemoFilter.all.label,
             isActive: _selectedFilter == MemoFilter.all,
             onTap: () {
@@ -458,39 +440,11 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               });
             },
             width: 104,
+            fontSize: 16,
+            activeFontWeight: FontWeight.w400,
+            inactiveFontWeight: FontWeight.w400,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFilterButton({
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-    required double width,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: width,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF3C3C3C) : const Color(0xFF212121),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : const Color(0xFF6A6A6A),
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w400,
-              fontSize: 16,
-              height: 24 / 16,
-            ),
-          ),
-        ),
       ),
     );
   }

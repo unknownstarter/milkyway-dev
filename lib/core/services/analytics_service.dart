@@ -1,4 +1,5 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
+import '../../features/home/domain/models/book_status.dart';
 
 class AnalyticsService {
   final FirebaseAnalytics? _analytics;
@@ -81,14 +82,14 @@ class AnalyticsService {
   }
 
   // 책 상태 변경 이벤트
-  Future<void> logBookStatusChanged(String bookId, String status) async {
+  Future<void> logBookStatusChanged(String bookId, BookStatus status) async {
     if (_analytics == null) return;
     try {
       await _analytics.logEvent(
         name: 'book_status_changed',
         parameters: {
           'book_id': bookId,
-          'status': status,
+          'status': status.value, // enum을 String으로 변환
         },
       );
     } catch (e) {

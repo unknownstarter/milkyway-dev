@@ -29,6 +29,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<bool> _isHorizontalDraggingNotifier =
       ValueNotifier<bool>(false);
+  bool _wasCollapsed = false;
 
   @override
   void initState() {
@@ -74,31 +75,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!_scrollController.hasClients) return;
 
     final scrollPosition = _scrollController.position.pixels;
-    // 스크롤이 맨 위에 가까울 때 (10px 이내)
-    if (scrollPosition < 10) {
-      final booksAsync = ref.read(userBooksProvider);
-      booksAsync.whenData((books) {
-        if (books.isEmpty || !_pageController.hasClients) return;
-
-        final selectedBookId = ref.read(selectedBookIdProvider);
-        if (selectedBookId == null) return;
-
-        // 선택된 책의 인덱스 찾기
-        final selectedIndex =
-            books.indexWhere((book) => book.id == selectedBookId);
-        if (selectedIndex == -1) return;
-
-        final currentPage = _pageController.page?.round() ?? 0;
-        // 현재 페이지와 선택된 책의 인덱스가 다르면 동기화
-        if (currentPage != selectedIndex) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _pageController.hasClients) {
-              _pageController.jumpToPage(selectedIndex);
-            }
-          });
-        }
-      });
+    final isExpanded = scrollPosition < 10; // expanded 상태 체크 (맨 위)
+    final wasCollapsed = _wasCollapsed;
+    
+    // collapsed 상태에서 expanded 상태로 전환될 때 즉시 동기화
+    if (wasCollapsed && isExpanded) {
+      _syncPageControllerToSelectedBook();
     }
+    
+    // 스크롤이 맨 위에 가까울 때 (10px 이내) 동기화
+    if (isExpanded) {
+      _syncPageControllerToSelectedBook();
+    }
+    
+    // collapsed 상태 업데이트
+    _wasCollapsed = !isExpanded;
+  }
+
+  // PageController를 선택된 책의 인덱스로 동기화
+  void _syncPageControllerToSelectedBook() {
+    if (!_pageController.hasClients) return;
+    
+    final booksAsync = ref.read(userBooksProvider);
+    booksAsync.whenData((books) {
+      if (books.isEmpty || !_pageController.hasClients) return;
+
+      final selectedBookId = ref.read(selectedBookIdProvider);
+      if (selectedBookId == null) return;
+
+      // 선택된 책의 인덱스 찾기
+      final selectedIndex =
+          books.indexWhere((book) => book.id == selectedBookId);
+      if (selectedIndex == -1) return;
+
+      final currentPage = _pageController.page?.round() ?? 0;
+      // 현재 페이지와 선택된 책의 인덱스가 다르면 동기화
+      if (currentPage != selectedIndex) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _pageController.hasClients) {
+            _pageController.jumpToPage(selectedIndex);
+          }
+        });
+      }
+    });
   }
 
   @override

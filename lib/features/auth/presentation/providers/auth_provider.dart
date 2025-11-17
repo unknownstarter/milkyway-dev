@@ -159,7 +159,7 @@ class Auth extends _$Auth {
 
       // 사용자 데이터 삭제
       await _supabase.from('users').delete().eq('id', currentUser.id);
-
+      
       // 계정 삭제
       await _supabase.auth.signOut();
       state = const AsyncValue.data(null);
@@ -169,7 +169,7 @@ class Auth extends _$Auth {
   }
 
   bool get isSignedIn => _supabase.auth.currentUser != null;
-
+  
   String? get currentUserId => _supabase.auth.currentUser?.id;
 
   Future<void> checkAppVersion() async {
@@ -188,8 +188,8 @@ class Auth extends _$Auth {
       if (currentUser == null) return;
 
       await _supabase.from('users').update({
-        'onboarding_completed': completed,
-        'updated_at': DateTime.now().toIso8601String(),
+            'onboarding_completed': completed,
+            'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', currentUser.id);
 
       // 상태 새로고침

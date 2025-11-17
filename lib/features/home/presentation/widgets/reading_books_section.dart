@@ -29,11 +29,37 @@ class ReadingBooksSection extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    // 선택된 책 ID watch (변경 시 자동 동기화)
+    final selectedBookId = ref.watch(selectedBookIdProvider);
+
     // 선택된 책 ID 설정 (빌드 완료 후)
     if (books.length == 1) {
-      if (ref.read(selectedBookIdProvider) != books[0].id) {
+      if (selectedBookId != books[0].id) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.read(selectedBookIdProvider.notifier).state = books[0].id;
+        });
+      }
+    }
+
+    // expanded 상태일 때 항상 PageController 동기화
+    // 축소→확장 전환 시 선택된 책으로 바로 표시
+    if (scrollController.hasClients && pageController.hasClients) {
+      final scrollPosition = scrollController.position.pixels;
+      final isExpanded = scrollPosition < 10; // expanded 상태 체크 (맨 위)
+      
+      if (isExpanded && selectedBookId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (pageController.hasClients) {
+            final selectedIndex = books.indexWhere(
+              (book) => book.id == selectedBookId,
+            );
+            if (selectedIndex != -1) {
+              final currentPage = pageController.page?.round() ?? 0;
+              if (currentPage != selectedIndex) {
+                pageController.jumpToPage(selectedIndex);
+              }
+            }
+          }
         });
       }
     }
@@ -281,27 +307,65 @@ class _BookSwipeViewState extends ConsumerState<_BookSwipeView> {
   @override
   void initState() {
     super.initState();
-    // PageController 초기화 (화면 복귀 시 첫 페이지로 리셋) - 한 번만 실행
-    if (!widget.hasResetPageController) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted &&
-            widget.pageController.hasClients &&
-            widget.pageController.page != 0) {
-          widget.pageController.animateToPage(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
+    // PageController 초기화: 선택된 책의 인덱스로 즉시 설정
+    // 뷰를 그릴 때 무조건 선택한 책 ID로 표시
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.pageController.hasClients) return;
+      
+      // 선택된 책 ID 읽기 (nullable 처리)
+      final selectedBookId = ref.read(selectedBookIdProvider);
+      int targetIndex = 0; // 기본값: 첫 번째 책 (신규 회원 고려)
+      
+      if (selectedBookId != null) {
+        final selectedIndex = widget.books.indexWhere(
+          (book) => book.id == selectedBookId,
+        );
+        if (selectedIndex != -1) {
+          targetIndex = selectedIndex;
         }
-        if (mounted) {
-          widget.onPageControllerReset();
-        }
-      });
-    }
+      }
+      
+      // PageController를 선택된 책 인덱스로 즉시 설정
+      final currentPage = widget.pageController.page?.round();
+      if (currentPage == null || currentPage != targetIndex) {
+        widget.pageController.jumpToPage(targetIndex);
+      }
+      
+      if (!widget.hasResetPageController && mounted) {
+        widget.onPageControllerReset();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // selectedBookIdProvider를 watch하여 변경 시 자동 동기화
+    final selectedBookId = ref.watch(selectedBookIdProvider);
+    
+    // expanded 상태일 때 항상 PageController 동기화
+    // 축소→확장 전환 시 선택된 책으로 바로 표시
+    if (widget.scrollController.hasClients && widget.pageController.hasClients) {
+      final scrollPosition = widget.scrollController.position.pixels;
+      final isExpanded = scrollPosition < 10; // expanded 상태 체크 (맨 위)
+      
+      // expanded 상태이고 선택된 책이 있으면 항상 동기화
+      if (isExpanded && selectedBookId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && widget.pageController.hasClients) {
+            final selectedIndex = widget.books.indexWhere(
+              (book) => book.id == selectedBookId,
+            );
+            if (selectedIndex != -1) {
+              final currentPage = widget.pageController.page?.round() ?? 0;
+              if (currentPage != selectedIndex) {
+                widget.pageController.jumpToPage(selectedIndex);
+              }
+            }
+          }
+        });
+      }
+    }
+
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is ScrollStartNotification) {

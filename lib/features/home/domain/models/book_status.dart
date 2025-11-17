@@ -32,4 +32,3 @@ enum BookStatus {
   /// DB에 저장할 때 사용
   String toJson() => value;
 }
-

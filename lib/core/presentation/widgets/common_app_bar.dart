@@ -16,6 +16,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
         title: Text(title, style: const TextStyle(color: Colors.white)),
         centerTitle: centerTitle,
         backgroundColor: const Color(0xFF181818),
+        surfaceTintColor: Colors.transparent, // Material 3에서 스크롤 시 색상 변경 방지
         actions: actions,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
