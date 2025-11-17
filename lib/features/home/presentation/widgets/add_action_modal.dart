@@ -63,7 +63,7 @@ class AddActionModal extends StatelessWidget {
           ),
           onTap: () {
             Navigator.pop(context);
-            context.go('/memos/create');
+            context.push('/memos/create');
           },
         ),
         const SizedBox(height: 16),

@@ -352,12 +352,13 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
 
   Widget _buildBookDescription(Book book) {
     final description = book.description ?? '';
+    // 12px 폰트 기준으로 더보기 조건 조정 (약 240자)
     final shouldShowMoreButton =
-        description.length > 180 && !_isDescriptionExpanded;
+        description.length > 240 && !_isDescriptionExpanded;
     final displayText = _isDescriptionExpanded
         ? description
-        : (description.length > 180
-            ? description.substring(0, 180)
+        : (description.length > 240
+            ? description.substring(0, 240)
             : description);
 
     return Padding(
@@ -383,13 +384,13 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               color: Colors.white,
               fontFamily: 'Pretendard',
               fontWeight: FontWeight.w400,
-              fontSize: 16,
-              height: 24 / 16,
+              fontSize: 12,
+              height: 18 / 12,
             ),
           ),
           if (shouldShowMoreButton) ...[
             const SizedBox(height: 20), // 피그마: 책 소개 내용 끝 ~ 더보기 버튼
-            // 더보기 버튼 (180자 이상일 때만 표시)
+            // 더보기 버튼 (240자 이상일 때만 표시)
             GestureDetector(
               onTap: () {
                 setState(() {

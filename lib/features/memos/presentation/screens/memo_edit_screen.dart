@@ -86,7 +86,15 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _hasChanges ? _showExitDialog : () => context.pop(),
+          onPressed: _hasChanges
+              ? _showExitDialog
+              : () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
         ),
         actions: [
           TextButton(

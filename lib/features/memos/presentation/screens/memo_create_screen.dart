@@ -60,7 +60,13 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         actions: [
           TextButton(
