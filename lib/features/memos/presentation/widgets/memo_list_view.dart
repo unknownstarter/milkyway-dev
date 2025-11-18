@@ -27,7 +27,7 @@ class MemoListView extends ConsumerStatefulWidget {
 }
 
 class _MemoListViewState extends ConsumerState<MemoListView> {
-  MemoFilter _selectedFilter = MemoFilter.all;
+  MemoFilter _selectedFilter = MemoFilter.myMemos;
   
   // 필터링 결과 메모이제이션
   List<Memo>? _cachedFilteredMemos;
@@ -68,7 +68,7 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
                     padding: const EdgeInsets.only(
                       left: 20,
                       right: 20,
-                      bottom: 100, // 메모하기 버튼과 겹치지 않도록 하단 여백 추가
+                      bottom: 8, // 메모하기 버튼과 겹치지 않도록 최소 여백만 유지
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -170,35 +170,40 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
   }
 
   Widget _buildEmptyMemos() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.note_add,
-            color: Colors.grey,
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '아직 메모가 없습니다',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Pretendard',
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: 120, // 메모하기 버튼(41px) + 상하 padding(40px) + 여유 공간(39px)
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.note_add,
+              color: Colors.grey,
+              size: 48,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '첫 번째 메모를 작성해보세요',
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 14,
-              fontFamily: 'Pretendard',
+            const SizedBox(height: 16),
+            const Text(
+              '아직 메모가 없습니다',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Pretendard',
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              '첫 번째 메모를 작성해보세요',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 14,
+                fontFamily: 'Pretendard',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

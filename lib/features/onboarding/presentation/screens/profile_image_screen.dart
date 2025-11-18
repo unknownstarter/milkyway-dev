@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../providers/onboarding_provider.dart';
@@ -323,7 +324,7 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
 
       // 다음 화면으로 이동
       if (mounted) {
-        context.go('/onboarding/book-intro');
+        context.goNamed(AppRoutes.onboardingBookIntroName);
       }
     } catch (e) {
       if (mounted) {

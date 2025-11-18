@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'home_profile_section.dart';
+import '../../../../core/router/app_routes.dart';
 
 /// 순환 표시할 문구 리스트
 const List<String> _readingPrompts = [
@@ -48,7 +49,7 @@ class HomeEmptyState extends ConsumerWidget {
           const SizedBox(height: 16),
           Center(
             child: GestureDetector(
-              onTap: () => context.go('/books/search'),
+              onTap: () => context.goNamed(AppRoutes.bookSearchName),
               child: Container(
                 width: 104,
                 height: 147,

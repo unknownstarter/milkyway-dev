@@ -24,9 +24,14 @@ class AppRoutes {
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
   
-  // 라우트 경로 생성 헬퍼
+  // 라우트 경로 생성 헬퍼 (deprecated: named routes 사용 권장)
+  @Deprecated('Use context.pushNamed(AppRoutes.bookDetailName, pathParameters: {\'id\': bookId}) instead')
   static String bookDetailPath(String bookId) => '$bookDetail/$bookId';
+  
+  @Deprecated('Use context.pushNamed(AppRoutes.memoDetailName, pathParameters: {\'id\': memoId}) instead')
   static String memoDetailPath(String memoId) => '$memoDetail/$memoId';
+  
+  @Deprecated('Use context.pushNamed(AppRoutes.memoEditName, pathParameters: {\'id\': memoId}) instead')
   static String memoEditPath(String memoId) => '$memoEdit/$memoId';
   
   // 라우트 이름

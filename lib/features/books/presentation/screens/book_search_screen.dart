@@ -6,6 +6,7 @@ import '../providers/book_search_provider.dart';
 import '../providers/book_register_provider.dart';
 import '../../domain/models/naver_book.dart';
 import '../../../../core/providers/analytics_provider.dart';
+import '../../../../core/router/app_routes.dart';
 
 class BookSearchScreen extends ConsumerStatefulWidget {
   final bool isFromOnboarding;
@@ -55,7 +56,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
     } else {
       // 이전 페이지가 없으면 무조건 홈으로 이동
       // (책 검색 화면은 온보딩 완료 후에만 접근 가능)
-      context.go('/home');
+      context.goNamed(AppRoutes.homeName);
     }
   }
 
@@ -384,8 +385,14 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
           ),
         );
         // 책 상세 페이지로 이동 (등록 플래그 및 온보딩 플래그 포함)
-        final queryParams = 'isFromRegistration=true${widget.isFromOnboarding ? '&isFromOnboarding=true' : ''}';
-        context.push('/books/detail/$bookId?$queryParams');
+        context.pushNamed(
+          AppRoutes.bookDetailName,
+          pathParameters: {'id': bookId},
+          queryParameters: {
+            'isFromRegistration': 'true',
+            if (widget.isFromOnboarding) 'isFromOnboarding': 'true',
+          },
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -411,8 +418,14 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
             ),
           );
           // 책 상세 페이지로 이동 (등록 플래그 및 온보딩 플래그 포함)
-          final queryParams = 'isFromRegistration=true${widget.isFromOnboarding ? '&isFromOnboarding=true' : ''}';
-          context.push('/books/detail/${book.id}?$queryParams');
+          context.pushNamed(
+            AppRoutes.bookDetailName,
+            pathParameters: {'id': book.id},
+            queryParameters: {
+              'isFromRegistration': 'true',
+              if (widget.isFromOnboarding) 'isFromOnboarding': 'true',
+            },
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

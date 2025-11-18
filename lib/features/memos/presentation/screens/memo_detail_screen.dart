@@ -4,6 +4,7 @@ import '../../../../core/presentation/widgets/star_background_scaffold.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/memo_provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 
 class MemoDetailScreen extends ConsumerWidget {
   final String memoId;
@@ -19,13 +20,20 @@ class MemoDetailScreen extends ConsumerWidget {
 
     return memoAsync.when(
       data: (memo) => _buildContent(context, ref, memo),
-      loading: () => const Scaffold(
-        body: Center(
+      loading: () => Scaffold(
+        backgroundColor: const Color(0xFF181818),
+        body: const Center(
           child: CircularProgressIndicator(color: Color(0xFFECECEC)),
         ),
       ),
       error: (error, stack) => Scaffold(
-        body: Center(child: Text('오류: $error')),
+        backgroundColor: const Color(0xFF181818),
+        body: Center(
+          child: Text(
+            '오류: $error',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
       ),
     );
   }
@@ -43,7 +51,7 @@ class MemoDetailScreen extends ConsumerWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/home');
+              context.goNamed(AppRoutes.homeName);
             }
           },
         ),
@@ -180,7 +188,10 @@ class MemoDetailScreen extends ConsumerWidget {
   }
 
   void _editMemo(BuildContext context, Memo memo) {
-    context.push('/memos/${memo.id}/edit');
+    context.pushNamed(
+      AppRoutes.memoEditName,
+      pathParameters: {'id': memo.id},
+    );
   }
 
   String _formatDate(DateTime date) {
@@ -191,16 +202,23 @@ class MemoDetailScreen extends ConsumerWidget {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('메모 삭제'),
-        content: const Text('이 메모를 삭제하시겠습니까?'),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          '메모 삭제',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          '이 메모를 삭제하시겠습니까?',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제'),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -208,7 +226,10 @@ class MemoDetailScreen extends ConsumerWidget {
 
     if (shouldDelete == true) {
       try {
-        // TODO: deleteMemoProvider 구현 필요
+        await ref.read(deleteMemoProvider(
+          (memoId: memo.id, bookId: memo.bookId),
+        ).future);
+        
         if (context.mounted) {
           context.pop();
         }

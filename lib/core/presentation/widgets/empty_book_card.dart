@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/router/app_routes.dart';
 
 class EmptyBookCard extends StatelessWidget {
   const EmptyBookCard({super.key});
@@ -23,7 +24,7 @@ class EmptyBookCard extends StatelessWidget {
           ),
         ),
         GestureDetector(
-          onTap: () => context.push('/books/search'),
+          onTap: () => context.pushNamed(AppRoutes.bookSearchName),
           child: Container(
             height: screenHeight * 0.45,
             margin: const EdgeInsets.symmetric(horizontal: 20),

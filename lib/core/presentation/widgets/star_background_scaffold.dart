@@ -20,7 +20,7 @@ class StarBackgroundScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF181818),
       appBar: appBar,
       body: Stack(
         children: [

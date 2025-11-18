@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'router_extensions.dart';
 import 'package:whatif_milkyway_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:whatif_milkyway_app/features/home/presentation/screens/home_screen.dart';
 import 'package:whatif_milkyway_app/features/splash/presentation/screens/splash_screen.dart';
@@ -63,7 +64,7 @@ final router = GoRouter(
       path: AppRoutes.bookSearch,
       name: AppRoutes.bookSearchName,
       builder: (context, state) {
-        final isFromOnboarding = state.uri.queryParameters['isFromOnboarding'] == 'true';
+        final isFromOnboarding = state.getBoolQuery('isFromOnboarding');
         return BookSearchScreen(isFromOnboarding: isFromOnboarding);
       },
     ),
@@ -73,10 +74,11 @@ final router = GoRouter(
       path: '${AppRoutes.bookDetail}/:id',
       name: AppRoutes.bookDetailName,
       builder: (context, state) {
-        final isFromRegistration = state.uri.queryParameters['isFromRegistration'] == 'true';
-        final isFromOnboarding = state.uri.queryParameters['isFromOnboarding'] == 'true';
+        final bookId = state.requirePathParam('id');
+        final isFromRegistration = state.getBoolQuery('isFromRegistration');
+        final isFromOnboarding = state.getBoolQuery('isFromOnboarding');
         return BookDetailScreen(
-          bookId: state.pathParameters['id']!,
+          bookId: bookId,
           isFromRegistration: isFromRegistration,
           isFromOnboarding: isFromOnboarding,
         );
@@ -84,9 +86,11 @@ final router = GoRouter(
     ),
     
     // 메모 작성 화면 (ShellRoute 밖 - 책 상세에서 접근용)
+    // 주의: ShellRoute 안에도 동일한 경로가 있지만, 
+    // ShellRoute 밖에서는 하단 네비게이션바 없이 표시됨
     GoRoute(
       path: AppRoutes.memoCreate,
-      name: '${AppRoutes.memoCreateName}-standalone',
+      name: AppRoutes.memoCreateName,
       builder: (context, state) {
         final bookId = state.uri.queryParameters['bookId'];
         return MemoCreateScreen(
@@ -107,7 +111,16 @@ final router = GoRouter(
       path: '${AppRoutes.memoDetail}/:id',
       name: AppRoutes.memoDetailName,
       builder: (context, state) => MemoDetailScreen(
-        memoId: state.pathParameters['id']!,
+        memoId: state.requirePathParam('id'),
+      ),
+    ),
+    
+    // 메모 편집 화면 (ShellRoute 밖 - 하단 네비게이션바 없음)
+    GoRoute(
+      path: '${AppRoutes.memoEdit}/:id',
+      name: AppRoutes.memoEditName,
+      builder: (context, state) => MemoEditScreen(
+        memoId: state.requirePathParam('id'),
       ),
     ),
     
@@ -123,7 +136,7 @@ final router = GoRouter(
           path: AppRoutes.home,
           name: AppRoutes.homeName,
           pageBuilder: (context, state) {
-            final autoBookSearch = state.uri.queryParameters['autoBookSearch'] == 'true';
+            final autoBookSearch = state.getBoolQuery('autoBookSearch');
             return NoTransitionPage(
               child: HomeScreen(autoBookSearch: autoBookSearch),
             );
@@ -154,23 +167,12 @@ final router = GoRouter(
             child: MemoListScreen(),
           ),
         ),
-        GoRoute(
-          path: AppRoutes.memoCreate,
-          name: AppRoutes.memoCreateName,
-          builder: (context, state) {
-            final bookId = state.uri.queryParameters['bookId'];
-            return MemoCreateScreen(
-              bookId: bookId,
-            );
-          },
-        ),
-        GoRoute(
-          path: '${AppRoutes.memoEdit}/:id',
-          name: AppRoutes.memoEditName,
-          builder: (context, state) => MemoEditScreen(
-            memoId: state.pathParameters['id']!,
-          ),
-        ),
+        // 메모 작성 화면 (ShellRoute 안 - 하단 네비게이션바 있음)
+        // 주의: ShellRoute 밖에도 동일한 경로가 있지만,
+        // ShellRoute 안에서는 하단 네비게이션바와 함께 표시됨
+        // GoRouter는 첫 번째 매칭되는 라우트를 사용하므로,
+        // ShellRoute 밖의 라우트가 우선순위가 높음
+        // 따라서 ShellRoute 안의 이 라우트는 실제로 사용되지 않을 수 있음
         
         // 프로필 화면
         GoRoute(

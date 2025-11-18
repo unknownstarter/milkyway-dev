@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../providers/memo_provider.dart';
@@ -26,6 +27,9 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
   bool _isLoading = false;
   bool _hasChanges = false;
   String? _bookId;
+  String? _originalContent;
+  String? _originalPage;
+  String? _originalImageUrl;
 
   @override
   void initState() {
@@ -51,6 +55,14 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
         _contentController.text = memo.content;
         _pageController.text = memo.page?.toString() ?? '';
         _selectedImagePath = memo.imageUrl;
+        
+        // 원본 데이터 저장 (변경사항 감지용)
+        _originalContent = memo.content;
+        _originalPage = memo.page?.toString();
+        _originalImageUrl = memo.imageUrl;
+        
+        // 초기 로드 후 변경사항 체크
+        _checkChanges();
       }
     } catch (e) {
       if (mounted) {
@@ -65,8 +77,25 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
   }
 
   void _checkChanges() {
+    if (_originalContent == null) {
+      // 아직 원본 데이터가 로드되지 않았으면 변경사항 없음
+      setState(() {
+        _hasChanges = false;
+      });
+      return;
+    }
+    
+    final currentContent = _contentController.text.trim();
+    final currentPage = _pageController.text.trim();
+    final currentImageUrl = _selectedImagePath;
+    
+    // 원본과 비교하여 변경사항 확인
+    final contentChanged = currentContent != _originalContent;
+    final pageChanged = currentPage != (_originalPage ?? '');
+    final imageChanged = currentImageUrl != _originalImageUrl;
+    
     setState(() {
-      _hasChanges = _contentController.text.isNotEmpty;
+      _hasChanges = contentChanged || pageChanged || imageChanged;
     });
   }
 
@@ -92,7 +121,7 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
                   if (context.canPop()) {
                     context.pop();
                   } else {
-                    context.go('/home');
+                    context.goNamed(AppRoutes.homeName);
                   }
                 },
         ),
@@ -337,6 +366,7 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
           setState(() {
             _selectedImagePath = image.path;
           });
+          _checkChanges();
         }
       }
     } catch (e) {
@@ -353,6 +383,7 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
     setState(() {
       _selectedImagePath = null;
     });
+    _checkChanges();
   }
 
   Future<void> _saveMemo() async {

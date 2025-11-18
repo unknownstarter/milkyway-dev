@@ -1,4 +1,5 @@
 import 'memo.dart';
+import 'memo_visibility.dart';
 
 /// 메모 필터 enum
 /// 
@@ -7,7 +8,7 @@ enum MemoFilter {
   /// 내가 쓴 메모만
   myMemos('내가 쓴'),
   
-  /// 모든 메모
+  /// 모든 메모 (책 상세 화면에서는 공개 메모만 표시)
   all('모든 메모');
 
   final String label;
@@ -27,14 +28,17 @@ extension MemoFilterExtension on MemoFilter {
   /// 
   /// - [MemoFilter.myMemos]: 현재 사용자가 작성한 메모만 반환
   ///   - [currentUserId]가 null인 경우 빈 리스트 반환
-  /// - [MemoFilter.all]: 모든 메모 반환 (필터링 없음)
+  /// - [MemoFilter.all]: 공개 메모만 반환 (책 상세 화면에서 사용)
   List<Memo> filterMemos(List<Memo> memos, String? currentUserId) {
     switch (this) {
       case MemoFilter.myMemos:
         if (currentUserId == null) return [];
         return memos.where((memo) => memo.userId == currentUserId).toList();
       case MemoFilter.all:
-        return memos;
+        // 책 상세 화면의 "모든 메모" 필터에서는 공개 메모만 표시
+        return memos
+            .where((memo) => memo.visibility == MemoVisibility.public)
+            .toList();
     }
   }
 }

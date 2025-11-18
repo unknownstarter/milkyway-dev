@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../domain/models/book.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
 import '../providers/selected_book_provider.dart';
@@ -66,7 +67,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (widget.autoBookSearch) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.push('/books/search?isFromOnboarding=true');
+          context.pushNamed(
+            AppRoutes.bookSearchName,
+            queryParameters: {'isFromOnboarding': 'true'},
+          );
         }
       });
     }

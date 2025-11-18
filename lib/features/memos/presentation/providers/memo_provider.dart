@@ -105,11 +105,14 @@ final deleteMemoProvider =
     final repository = ref.watch(memoRepositoryProvider);
     await repository.deleteMemo(params.memoId);
 
+    // 모든 관련 provider 무효화하여 UI 업데이트
     ref.invalidate(paginatedMemosProvider(params.bookId));
+    ref.invalidate(paginatedMemosProvider(null)); // 전체 메모 리스트도 무효화
     ref.invalidate(bookMemosProvider(params.bookId));
     ref.invalidate(recentMemosProvider);
     ref.invalidate(homeRecentMemosProvider);
     ref.invalidate(allMemosProvider);
+    ref.invalidate(memoProvider(params.memoId)); // 메모 상세도 무효화
   },
 );
 

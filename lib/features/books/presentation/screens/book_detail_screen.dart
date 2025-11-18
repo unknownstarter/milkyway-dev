@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/book_detail_provider.dart';
 import '../../../../core/providers/analytics_provider.dart';
 import '../../../../core/presentation/widgets/pill_filter_button.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../home/domain/models/book.dart';
 import '../../../home/domain/models/book_status.dart';
 import '../../../memos/presentation/widgets/memo_list_view.dart';
@@ -49,10 +50,10 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
           onPressed: () {
             if (widget.isFromOnboarding) {
               // 온보딩을 통해 책 검색 → 책 저장 → 책 상세로 온 경우 홈으로 이동
-              context.go('/home');
+              context.goNamed(AppRoutes.homeName);
             } else if (widget.isFromRegistration) {
               // 일반적으로 책 등록 후 진입한 경우 홈으로 이동
-              context.go('/home');
+              context.goNamed(AppRoutes.homeName);
             } else {
               // 일반적인 경우 이전 페이지로 이동
               context.pop();
@@ -95,7 +96,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
     return Stack(
       children: [
         SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 100),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -553,6 +554,9 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
   }
 
   void _addMemo(Book book) {
-    context.push('/memos/create?bookId=${book.id}');
+    context.pushNamed(
+      AppRoutes.memoCreateName,
+      queryParameters: {'bookId': book.id},
+    );
   }
 }

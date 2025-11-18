@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../widgets/splash_layout.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -54,27 +55,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
       final session = Supabase.instance.client.auth.currentSession;
       if (session == null || session.isExpired) {
-        if (mounted) context.go('/login');
+        if (mounted) context.goNamed(AppRoutes.loginName);
         return;
       }
 
       final user = await ref.read(authProvider.notifier).getCurrentUser();
       if (user == null) {
-        if (mounted) context.go('/login');
+        if (mounted) context.goNamed(AppRoutes.loginName);
         return;
       }
 
       if (!user.onboardingCompleted) {
-        if (mounted) context.go('/onboarding/nickname');
+        if (mounted) context.goNamed(AppRoutes.onboardingNicknameName);
         return;
       }
 
-      if (mounted) context.go('/home');
+      if (mounted) context.goNamed(AppRoutes.homeName);
     } catch (e) {
       if (e.toString().contains('업데이트가 필요합니다')) {
         _showForceUpdateDialog();
       } else {
-        if (mounted) context.go('/login');
+        if (mounted) context.goNamed(AppRoutes.loginName);
       }
     }
   }

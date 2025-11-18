@@ -116,7 +116,7 @@ class _ProfileContent extends StatelessWidget {
                   width: double.infinity,
                   child: TextButton(
                     onPressed: () {
-                      context.push(AppRoutes.profileEdit);
+                      context.pushNamed(AppRoutes.profileEditName);
                     },
                     style: TextButton.styleFrom(
                       backgroundColor: Colors.grey.shade900,

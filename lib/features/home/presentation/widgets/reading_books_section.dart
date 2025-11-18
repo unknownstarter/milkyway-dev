@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/book.dart';
 import '../providers/selected_book_provider.dart';
+import '../../../../core/router/app_routes.dart';
 
 /// 읽고 있는 책 섹션 (확장된 형태)
 class ReadingBooksSection extends ConsumerWidget {
@@ -158,7 +159,10 @@ class CollapsedReadingBooksSection extends ConsumerWidget {
               // 선택된 책 ID 업데이트
               ref.read(selectedBookIdProvider.notifier).state =
                   selectedBook.id;
-              context.push('/books/detail/${selectedBook.id}');
+              context.pushNamed(
+                AppRoutes.bookDetailName,
+                pathParameters: {'id': selectedBook.id},
+              );
             },
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -277,7 +281,10 @@ class _SingleBookView extends ConsumerWidget {
         onTap: () {
           // 선택된 책 ID 업데이트
           ref.read(selectedBookIdProvider.notifier).state = book.id;
-          context.push('/books/detail/${book.id}');
+          context.pushNamed(
+            AppRoutes.bookDetailName,
+            pathParameters: {'id': book.id},
+          );
         },
         child: _BookCover(
           book: book,
@@ -462,7 +469,10 @@ class _AnimatedBookItem extends ConsumerWidget {
                 // 선택된 책 ID 업데이트
                 ref.read(selectedBookIdProvider.notifier).state =
                     books[index].id;
-                context.push('/books/detail/${books[index].id}');
+                context.pushNamed(
+                  AppRoutes.bookDetailName,
+                  pathParameters: {'id': books[index].id},
+                );
               },
               child: _BookCover(
                 book: books[index],

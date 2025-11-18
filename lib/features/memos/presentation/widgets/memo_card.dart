@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/models/memo.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:developer';
+import '../../../../core/router/app_routes.dart';
 
 class MemoCard extends StatelessWidget {
   final Memo memo;
@@ -15,7 +16,10 @@ class MemoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        context.go('/memos/detail/${memo.id}');
+        context.pushNamed(
+          AppRoutes.memoDetailName,
+          pathParameters: {'id': memo.id},
+        );
       },
       child: Card(
         elevation: 0,

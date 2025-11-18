@@ -379,7 +379,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     try {
       await ref.read(authProvider.notifier).signOut();
       if (mounted) {
-        context.go(AppRoutes.login);
+        context.goNamed(AppRoutes.loginName);
       }
     } catch (e) {
       if (mounted) {

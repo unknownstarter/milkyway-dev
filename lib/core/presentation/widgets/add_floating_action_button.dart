@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../features/home/presentation/widgets/add_action_modal.dart';
 
 /// 공통 플로팅 액션 버튼
-/// 
+///
 /// Home, Books, Memos 스크린에서 공통으로 사용하는 플로팅 버튼
 class AddFloatingActionButton extends StatelessWidget {
   const AddFloatingActionButton({super.key});
@@ -12,7 +12,7 @@ class AddFloatingActionButton extends StatelessWidget {
     return FloatingActionButton(
       onPressed: () => showModalBottomSheet(
         context: context,
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF313131),
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.3,
         ),
@@ -27,4 +27,3 @@ class AddFloatingActionButton extends StatelessWidget {
     );
   }
 }
-

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/book.dart';
+import '../../../../core/router/app_routes.dart';
 
 class BookCard extends StatelessWidget {
   final Book? book;
@@ -45,7 +46,10 @@ class BookCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (book != null) {
-          context.push('/books/detail/${book!.id}');
+          context.pushNamed(
+            AppRoutes.bookDetailName,
+            pathParameters: {'id': book!.id},
+          );
         } else {
           onTap();
         }

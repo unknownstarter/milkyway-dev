@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 import '../widgets/book_grid_item.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
 import '../../../../core/presentation/widgets/empty_book_card.dart';
@@ -199,7 +200,10 @@ class _BookGrid extends StatelessWidget {
         final book = books[index];
         return BookGridItem(
           book: book,
-          onTap: () => context.push('/books/detail/${book.id}'),
+          onTap: () => context.pushNamed(
+                AppRoutes.bookDetailName,
+                pathParameters: {'id': book.id},
+              ),
         );
       },
     );

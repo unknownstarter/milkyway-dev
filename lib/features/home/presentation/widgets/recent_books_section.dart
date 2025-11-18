@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/book_provider.dart';
 import '../providers/selected_book_provider.dart';
 import 'book_card.dart';
+import '../../../../core/router/app_routes.dart';
 
 class RecentBooksSection extends ConsumerWidget {
   const RecentBooksSection({super.key});
@@ -34,7 +35,7 @@ class RecentBooksSection extends ConsumerWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () => context.go('/books/search'),
+                onTap: () => context.goNamed(AppRoutes.bookSearchName),
                 child: Container(
                   height: 450,
                   margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -110,7 +111,10 @@ class RecentBooksSection extends ConsumerWidget {
                         // 선택된 책 ID 업데이트
                         ref.read(selectedBookIdProvider.notifier).state =
                             books[index].id;
-                        context.push('/books/detail/${books[index].id}');
+                        context.pushNamed(
+                          AppRoutes.bookDetailName,
+                          pathParameters: {'id': books[index].id},
+                        );
                       },
                     ),
                   ),

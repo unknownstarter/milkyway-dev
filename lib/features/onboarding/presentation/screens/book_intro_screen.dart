@@ -5,6 +5,7 @@ import 'package:whatif_milkyway_app/features/auth/presentation/providers/auth_pr
 import 'package:whatif_milkyway_app/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:whatif_milkyway_app/core/router/app_routes.dart';
 
 class BookIntroScreen extends ConsumerWidget {
   const BookIntroScreen({super.key});
@@ -111,7 +112,10 @@ class BookIntroScreen extends ConsumerWidget {
 
                     // 홈 화면으로 이동하면서 자동 책 검색 플래그 설정
                     if (context.mounted) {
-                      context.go('/home?autoBookSearch=true');
+                      context.goNamed(
+                        AppRoutes.homeName,
+                        queryParameters: {'autoBookSearch': 'true'},
+                      );
                     }
                   },
                   style: ElevatedButton.styleFrom(

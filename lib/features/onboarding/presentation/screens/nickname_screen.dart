@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/utils/random_nickname_generator.dart';
@@ -251,7 +252,7 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
       await ref.read(onboardingProvider.notifier).setNickname(randomNickname);
 
       if (mounted) {
-        context.go('/onboarding/profile-image');
+        context.goNamed(AppRoutes.onboardingProfileImageName);
       }
     } catch (e) {
       if (mounted) {
@@ -284,7 +285,7 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
       await ref.read(onboardingProvider.notifier).setNickname(nickname);
 
       if (mounted) {
-        context.go('/onboarding/profile-image');
+        context.goNamed(AppRoutes.onboardingProfileImageName);
       }
     } catch (e) {
       if (mounted) {

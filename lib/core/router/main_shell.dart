@@ -168,16 +168,16 @@ class MainShell extends StatelessWidget {
   void _onTabTapped(BuildContext context, int index) {
     switch (index) {
       case 0:
-        context.go(AppRoutes.home);
+        context.goNamed(AppRoutes.homeName);
         break;
       case 1:
-        context.go(AppRoutes.bookShelf);
+        context.goNamed(AppRoutes.bookShelfName);
         break;
       case 2:
-        context.go(AppRoutes.memos);
+        context.goNamed(AppRoutes.memosName);
         break;
       case 3:
-        context.go(AppRoutes.profile);
+        context.goNamed(AppRoutes.profileName);
         break;
     }
   }

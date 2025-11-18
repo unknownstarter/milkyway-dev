@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 import '../providers/auth_provider.dart';
 import 'dart:io' show Platform;
 import '../widgets/auth_background_layout.dart';
@@ -95,9 +96,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             await ref.read(authProvider.notifier).checkOnboardingStatus();
         if (context.mounted) {
           if (onboardingCompleted) {
-            context.go('/home');
+            context.goNamed(AppRoutes.homeName);
           } else {
-            context.go('/onboarding/nickname');
+            context.goNamed(AppRoutes.onboardingNicknameName);
           }
         }
       }

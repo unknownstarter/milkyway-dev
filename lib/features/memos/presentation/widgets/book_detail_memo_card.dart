@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../domain/models/memo.dart';
+import '../../../../core/router/app_routes.dart';
 
 /// 책 상세 화면과 메모 리스트 화면에서 사용하는 메모 카드 컴포넌트
 /// 
@@ -21,7 +22,10 @@ class BookDetailMemoCard extends StatelessWidget {
     final hasImage = memo.imageUrl != null && memo.imageUrl!.isNotEmpty;
 
     return GestureDetector(
-      onTap: () => context.push('/memos/detail/${memo.id}'),
+      onTap: () => context.pushNamed(
+            AppRoutes.memoDetailName,
+            pathParameters: {'id': memo.id},
+          ),
       child: Container(
         width: cardWidth,
         margin: const EdgeInsets.only(bottom: 40),

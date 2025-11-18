@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 
 class AddActionModal extends StatelessWidget {
   const AddActionModal({super.key});
@@ -35,7 +36,7 @@ class AddActionModal extends StatelessWidget {
           ),
           onTap: () {
             Navigator.pop(context);
-            context.go('/books/search');
+            context.goNamed(AppRoutes.bookSearchName);
           },
         ),
         ListTile(
@@ -63,7 +64,7 @@ class AddActionModal extends StatelessWidget {
           ),
           onTap: () {
             Navigator.pop(context);
-            context.push('/memos/create');
+            context.pushNamed(AppRoutes.memoCreateName);
           },
         ),
         const SizedBox(height: 16),

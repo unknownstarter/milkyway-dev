@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../memos/presentation/providers/memo_provider.dart';
 import '../../../memos/presentation/widgets/memo_card.dart';
 import '../providers/selected_book_provider.dart';
+import '../../../../core/router/app_routes.dart';
 
 class RecentMemosSection extends ConsumerWidget {
   const RecentMemosSection({super.key});
@@ -40,7 +41,10 @@ class RecentMemosSection extends ConsumerWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      context.push('/books/$selectedBookId');
+                      context.pushNamed(
+                        AppRoutes.bookDetailName,
+                        pathParameters: {'id': selectedBookId},
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF48FF00),

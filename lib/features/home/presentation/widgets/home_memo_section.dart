@@ -5,6 +5,7 @@ import '../../domain/models/book.dart';
 import '../../../memos/domain/models/memo.dart';
 import '../../../memos/presentation/providers/memo_provider.dart';
 import '../providers/selected_book_provider.dart';
+import '../../../../core/router/app_routes.dart';
 
 /// 홈 화면의 메모 섹션
 class HomeMemoSection extends ConsumerStatefulWidget {
@@ -114,7 +115,10 @@ class _MemoCard extends StatelessWidget {
     final hasImage = memo.imageUrl != null && memo.imageUrl!.isNotEmpty;
 
     return GestureDetector(
-      onTap: () => context.push('/memos/detail/${memo.id}'),
+      onTap: () => context.pushNamed(
+            AppRoutes.memoDetailName,
+            pathParameters: {'id': memo.id},
+          ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 40),
         decoration: BoxDecoration(
@@ -319,7 +323,10 @@ class _EmptyMemosList extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         if (selectedBookId != null) {
-          context.push('/memos/create?bookId=$selectedBookId');
+          context.pushNamed(
+            AppRoutes.memoCreateName,
+            queryParameters: {'bookId': selectedBookId},
+          );
         }
       },
       child: Center(
