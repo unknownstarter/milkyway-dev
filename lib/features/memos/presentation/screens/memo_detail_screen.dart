@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import '../widgets/full_screen_image_viewer.dart';
 
 class MemoDetailScreen extends ConsumerWidget {
   final String memoId;
@@ -78,42 +79,53 @@ class MemoDetailScreen extends ConsumerWidget {
             // 메모 이미지 (있는 경우) - 정사각형
             if (memo.imageUrl != null && memo.imageUrl!.isNotEmpty) ...[
               const SizedBox(height: 32),
-              AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      memo.imageUrl!,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          color: Colors.grey.shade900,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFFECECEC),
-                              strokeWidth: 2,
+              GestureDetector(
+                onDoubleTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => FullScreenImageViewer(
+                        imageUrl: memo.imageUrl!,
+                      ),
+                    ),
+                  );
+                },
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        memo.imageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: Colors.grey.shade900,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFECECEC),
+                                strokeWidth: 2,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey.shade900,
-                          child: const Center(
-                            child: Icon(
-                              Icons.image,
-                              color: Colors.grey,
-                              size: 48,
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade900,
+                            child: const Center(
+                              child: Icon(
+                                Icons.image,
+                                color: Colors.grey,
+                                size: 48,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),

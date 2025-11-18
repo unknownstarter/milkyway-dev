@@ -10,6 +10,30 @@
 
 ## 🚀 [1.0.0-dev] - 2025-11-18
 
+### 🖼️ 메모 상세 화면 이미지 전체 화면 보기 기능 추가 (2025-11-18)
+
+#### 📱 이미지 더블탭 기능 구현
+- **전체 화면 이미지 뷰어 추가** - `FullScreenImageViewer` 위젯 생성
+  - 검은 배경의 전체 화면 이미지 뷰어
+  - `InteractiveViewer`로 확대/축소 지원 (0.5x ~ 4.0x)
+  - 뒤로가기 버튼으로 원래 화면으로 복귀
+- **더블탭 제스처 추가** - `memo_detail_screen`의 이미지 영역에 더블탭 기능 추가
+  - 이미지를 더블탭하면 전체 화면으로 표시
+  - `GestureDetector`로 더블탭 이벤트 감지
+  - `Navigator.push`로 전체 화면 이미지 뷰어로 이동
+- **사용자 경험 개선**:
+  - 원본 사이즈로 이미지 확인 가능
+  - 핀치 제스처로 확대/축소 가능
+  - 시스템 뒤로가기 또는 앱바 뒤로가기 버튼으로 복귀
+
+#### 📝 수정된 파일
+- `lib/features/memos/presentation/widgets/full_screen_image_viewer.dart` - 신규 생성
+- `lib/features/memos/presentation/screens/memo_detail_screen.dart` - 더블탭 기능 추가
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-18
+
 ### 🔧 앱 아이콘 생성 및 적용 (2025-11-18)
 
 #### 📱 앱 아이콘 설정 완료
