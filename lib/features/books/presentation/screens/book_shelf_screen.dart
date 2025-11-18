@@ -59,12 +59,19 @@ class _BookShelfScreenState extends ConsumerState<BookShelfScreen> {
   ];
 
   // 필터링된 책 목록 (extension 메서드 사용 + 메모이제이션)
+  // GoRouter가 페이지를 캐싱하므로 뒤로가기 후에도 상태가 유지됨
   List<Book> _getFilteredBooks(List<Book> books) {
-    // 캐시가 유효한지 확인
+    // 캐시가 유효한지 확인 (리스트 길이와 필터로 비교하여 참조 비교 문제 해결)
     if (_cachedFilteredBooks != null &&
         _cachedFilter == _selectedFilter &&
-        _cachedAllBooks == books) {
-      return _cachedFilteredBooks!;
+        _cachedAllBooks != null &&
+        _cachedAllBooks!.length == books.length) {
+      // 리스트 내용이 실제로 변경되었는지 확인 (ID 기반)
+      final cachedIds = _cachedAllBooks!.map((b) => b.id).toSet();
+      final currentIds = books.map((b) => b.id).toSet();
+      if (cachedIds == currentIds) {
+        return _cachedFilteredBooks!;
+      }
     }
 
     // extension 메서드를 사용하여 필터링
@@ -73,7 +80,7 @@ class _BookShelfScreenState extends ConsumerState<BookShelfScreen> {
     // 캐시 업데이트
     _cachedFilteredBooks = filtered;
     _cachedFilter = _selectedFilter;
-    _cachedAllBooks = books;
+    _cachedAllBooks = List.from(books); // 새 리스트로 복사하여 참조 비교 문제 해결
     
     return filtered;
   }
@@ -119,10 +126,10 @@ class _BookShelfScreenState extends ConsumerState<BookShelfScreen> {
                 _buildFilterButtons(),
                 const Expanded(
                   child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(bottom: 200),
-                      child: EmptyBookCard(),
-                    ),
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 200),
+                child: EmptyBookCard(),
+              ),
                   ),
                 ),
               ],
@@ -162,7 +169,7 @@ class _BookShelfScreenState extends ConsumerState<BookShelfScreen> {
                       });
                     },
                     width: option.width,
-                  ),
+        ),
                   if (option != _filterOptions.last)
                     const SizedBox(width: 13),
                 ])

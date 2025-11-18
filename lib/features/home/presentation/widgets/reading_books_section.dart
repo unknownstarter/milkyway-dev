@@ -151,10 +151,15 @@ class CollapsedReadingBooksSection extends ConsumerWidget {
       child: SizedBox(
         height: cardHeight,
         width: double.infinity,
-        child: Padding(
+          child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: GestureDetector(
-            onTap: () => context.push('/books/detail/${selectedBook.id}'),
+            onTap: () {
+              // 선택된 책 ID 업데이트
+              ref.read(selectedBookIdProvider.notifier).state =
+                  selectedBook.id;
+              context.push('/books/detail/${selectedBook.id}');
+            },
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Container(
@@ -260,16 +265,20 @@ class CollapsedReadingBooksSection extends ConsumerWidget {
 }
 
 /// 단일 책 표시
-class _SingleBookView extends StatelessWidget {
+class _SingleBookView extends ConsumerWidget {
   final Book book;
 
   const _SingleBookView({required this.book});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Center(
       child: GestureDetector(
-        onTap: () => context.push('/books/detail/${book.id}'),
+        onTap: () {
+          // 선택된 책 ID 업데이트
+          ref.read(selectedBookIdProvider.notifier).state = book.id;
+          context.push('/books/detail/${book.id}');
+        },
         child: _BookCover(
           book: book,
           width: 104,
@@ -304,6 +313,8 @@ class _BookSwipeView extends ConsumerStatefulWidget {
 }
 
 class _BookSwipeViewState extends ConsumerState<_BookSwipeView> {
+  String? _lastSyncedBookId;
+
   @override
   void initState() {
     super.initState();
@@ -331,6 +342,8 @@ class _BookSwipeViewState extends ConsumerState<_BookSwipeView> {
         widget.pageController.jumpToPage(targetIndex);
       }
       
+      _lastSyncedBookId = selectedBookId;
+      
       if (!widget.hasResetPageController && mounted) {
         widget.onPageControllerReset();
       }
@@ -339,32 +352,31 @@ class _BookSwipeViewState extends ConsumerState<_BookSwipeView> {
 
   @override
   Widget build(BuildContext context) {
-    // selectedBookIdProvider를 watch하여 변경 시 자동 동기화
-    final selectedBookId = ref.watch(selectedBookIdProvider);
-    
-    // expanded 상태일 때 항상 PageController 동기화
-    // 축소→확장 전환 시 선택된 책으로 바로 표시
-    if (widget.scrollController.hasClients && widget.pageController.hasClients) {
-      final scrollPosition = widget.scrollController.position.pixels;
-      final isExpanded = scrollPosition < 10; // expanded 상태 체크 (맨 위)
-      
-      // expanded 상태이고 선택된 책이 있으면 항상 동기화
-      if (isExpanded && selectedBookId != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && widget.pageController.hasClients) {
-            final selectedIndex = widget.books.indexWhere(
-              (book) => book.id == selectedBookId,
-            );
-            if (selectedIndex != -1) {
-              final currentPage = widget.pageController.page?.round() ?? 0;
-              if (currentPage != selectedIndex) {
+    // selectedBookIdProvider 변경 감지: 실제 변경 시에만 동기화
+    // GoRouter가 페이지를 캐싱하므로 뒤로가기 후에는 상태가 유지되고 동기화 불필요
+    ref.listen<String?>(selectedBookIdProvider, (previous, next) {
+      // 이전 값과 다르고, 실제로 변경이 필요할 때만 동기화
+      if (next != null && 
+          next != _lastSyncedBookId &&
+          widget.pageController.hasClients) {
+        final selectedIndex = widget.books.indexWhere(
+          (book) => book.id == next,
+        );
+        if (selectedIndex != -1) {
+          final currentPage = widget.pageController.page?.round() ?? 0;
+          if (currentPage != selectedIndex) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && widget.pageController.hasClients) {
                 widget.pageController.jumpToPage(selectedIndex);
+                _lastSyncedBookId = next;
               }
-            }
+            });
+          } else {
+            _lastSyncedBookId = next;
           }
-        });
+        }
       }
-    }
+    });
 
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
@@ -414,7 +426,7 @@ class _BookSwipeViewState extends ConsumerState<_BookSwipeView> {
 }
 
 /// 애니메이션이 적용된 책 아이템
-class _AnimatedBookItem extends StatelessWidget {
+class _AnimatedBookItem extends ConsumerWidget {
   final List<Book> books;
   final int index;
   final PageController pageController;
@@ -426,7 +438,7 @@ class _AnimatedBookItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AnimatedBuilder(
       animation: pageController,
       builder: (context, child) {
@@ -446,7 +458,12 @@ class _AnimatedBookItem extends StatelessWidget {
           scale: scale,
           child: Center(
             child: GestureDetector(
-              onTap: () => context.push('/books/detail/${books[index].id}'),
+              onTap: () {
+                // 선택된 책 ID 업데이트
+                ref.read(selectedBookIdProvider.notifier).state =
+                    books[index].id;
+                context.push('/books/detail/${books[index].id}');
+              },
               child: _BookCover(
                 book: books[index],
                 width: 104,

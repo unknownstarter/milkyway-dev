@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/presentation/widgets/common_app_bar.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../widgets/feedback_modal.dart';
@@ -17,7 +16,23 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFF181818),
-      appBar: const CommonAppBar(title: '프로필'),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF181818),
+        surfaceTintColor: Colors.transparent, // Material 3에서 스크롤 시 색상 변경 방지
+        elevation: 0,
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+            height: 28 / 20,
+          ),
+        ),
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       // MainShell에서 이미 bottomNavigationBar를 제공하므로 제거
       body: userAsync.when(
         data: (user) => user == null

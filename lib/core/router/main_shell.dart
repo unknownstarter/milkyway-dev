@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
 
 /// 메인 앱 Shell
-/// 
+///
 /// BottomNavigationBar와 FAB를 포함한 메인 레이아웃
 class MainShell extends StatelessWidget {
   final Widget child;
@@ -27,14 +27,15 @@ class MainShell extends StatelessWidget {
 
   Widget _buildBottomNavigationBar(BuildContext context) {
     final currentIndex = _getCurrentIndex(location);
-    
+
     return Container(
       color: const Color(0xFF181818), // 배경은 181818
       child: SafeArea(
         top: false,
         bottom: true,
         child: Padding(
-          padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
+          padding:
+              const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
           child: Container(
             constraints: const BoxConstraints(
               minHeight: 64,
@@ -65,38 +66,38 @@ class MainShell extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                    _buildNavButton(
-                      context: context,
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home,
-                      label: 'Home',
-                      isActive: currentIndex == 0,
-                      onTap: () => _onTabTapped(context, 0),
-                    ),
-                    _buildNavButton(
-                      context: context,
-                      icon: Icons.book_outlined,
-                      activeIcon: Icons.book,
-                      label: 'Books',
-                      isActive: currentIndex == 1,
-                      onTap: () => _onTabTapped(context, 1),
-                    ),
-                    _buildNavButton(
-                      context: context,
-                      icon: Icons.note_outlined,
-                      activeIcon: Icons.note,
-                      label: 'Memos',
-                      isActive: currentIndex == 2,
-                      onTap: () => _onTabTapped(context, 2),
-                    ),
-                    _buildNavButton(
-                      context: context,
-                      icon: Icons.person_outline,
-                      activeIcon: Icons.person,
-                      label: 'Profile',
-                      isActive: currentIndex == 3,
-                      onTap: () => _onTabTapped(context, 3),
-                    ),
+                      _buildNavButton(
+                        context: context,
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home,
+                        label: 'Home',
+                        isActive: currentIndex == 0,
+                        onTap: () => _onTabTapped(context, 0),
+                      ),
+                      _buildNavButton(
+                        context: context,
+                        icon: Icons.book_outlined,
+                        activeIcon: Icons.book,
+                        label: 'Books',
+                        isActive: currentIndex == 1,
+                        onTap: () => _onTabTapped(context, 1),
+                      ),
+                      _buildNavButton(
+                        context: context,
+                        icon: Icons.note_outlined,
+                        activeIcon: Icons.note,
+                        label: 'Memos',
+                        isActive: currentIndex == 2,
+                        onTap: () => _onTabTapped(context, 2),
+                      ),
+                      _buildNavButton(
+                        context: context,
+                        icon: Icons.person_outline,
+                        activeIcon: Icons.person,
+                        label: 'Profile',
+                        isActive: currentIndex == 3,
+                        onTap: () => _onTabTapped(context, 3),
+                      ),
                     ],
                   ),
                 ),
@@ -132,7 +133,8 @@ class MainShell extends StatelessWidget {
             Icon(
               isActive ? activeIcon : icon,
               size: 20,
-              color: isActive ? const Color(0xFFF3F3F3) : const Color(0xFF757575),
+              color:
+                  isActive ? const Color(0xFFF3F3F3) : const Color(0xFF757575),
             ),
             const SizedBox(height: 2),
             Text(
@@ -141,7 +143,9 @@ class MainShell extends StatelessWidget {
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w600,
                 fontSize: 10,
-                color: isActive ? const Color(0xFFF3F3F3) : const Color(0xFF757575),
+                color: isActive
+                    ? const Color(0xFFF3F3F3)
+                    : const Color(0xFF757575),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -177,5 +181,4 @@ class MainShell extends StatelessWidget {
         break;
     }
   }
-
 }

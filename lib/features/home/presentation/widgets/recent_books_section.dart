@@ -106,7 +106,12 @@ class RecentBooksSection extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8.0),
                     child: BookCard(
                       book: books[index],
-                      onTap: () => context.push('/books/detail/${books[index].id}'),
+                      onTap: () {
+                        // 선택된 책 ID 업데이트
+                        ref.read(selectedBookIdProvider.notifier).state =
+                            books[index].id;
+                        context.push('/books/detail/${books[index].id}');
+                      },
                     ),
                   ),
                 ),

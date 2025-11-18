@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:timeago/timeago.dart' as timeago;
 import '../providers/book_detail_provider.dart';
-import '../../../memos/presentation/providers/memo_provider.dart';
-import '../../../memos/domain/models/memo.dart';
 import '../../../../core/providers/analytics_provider.dart';
 import '../../../../core/presentation/widgets/pill_filter_button.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../home/domain/models/book.dart';
 import '../../../home/domain/models/book_status.dart';
-import '../../../memos/domain/models/memo_filter.dart';
+import '../../../memos/presentation/widgets/memo_list_view.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
   final String bookId;
@@ -30,7 +26,6 @@ class BookDetailScreen extends ConsumerStatefulWidget {
 
 class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
   BookStatus? _selectedStatus;
-  MemoFilter _selectedFilter = MemoFilter.all;
   bool _isDescriptionExpanded = false;
 
   @override
@@ -47,6 +42,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       backgroundColor: const Color(0xFF181818),
       appBar: AppBar(
         backgroundColor: const Color(0xFF181818),
+        surfaceTintColor: Colors.transparent, // Material 3에서 스크롤 시 색상 변경 방지
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -129,15 +125,32 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         ),
         // 하단 고정 메모하기 버튼 (하단 네비게이션바 영역에 플로팅)
         Positioned(
-          left: 20,
-          right: 20,
+          left: 0,
+          right: 0,
           bottom: 0,
           child: SafeArea(
             top: false,
-            bottom: true,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: _buildAddMemoButton(book),
+            bottom: false, // SafeArea를 false로 하여 하단까지 확장
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 불투명 배경 (181818 색상으로 버튼 뒤와 아래 영역 모두 가리기)
+                Container(
+                  color: const Color(0xFF181818),
+                  padding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: 20,
+                  ),
+                  child: _buildAddMemoButton(book),
+                ),
+                // 하단 영역까지 181818로 가리기
+                Container(
+                  color: const Color(0xFF181818),
+                  height: MediaQuery.of(context).padding.bottom,
+                ),
+              ],
             ),
           ),
         ),
@@ -282,7 +295,8 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         children: [
           PillFilterButton(
             label: BookStatus.wantToRead.value,
-            isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.wantToRead,
+            isActive: (_selectedStatus ?? BookStatus.wantToRead) ==
+                BookStatus.wantToRead,
             onTap: () {
               setState(() {
                 _selectedStatus = BookStatus.wantToRead;
@@ -297,7 +311,8 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
           const SizedBox(width: 12),
           PillFilterButton(
             label: BookStatus.reading.value,
-            isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.reading,
+            isActive: (_selectedStatus ?? BookStatus.wantToRead) ==
+                BookStatus.reading,
             onTap: () {
               setState(() {
                 _selectedStatus = BookStatus.reading;
@@ -312,7 +327,8 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
           const SizedBox(width: 12),
           PillFilterButton(
             label: BookStatus.completed.value,
-            isActive: (_selectedStatus ?? BookStatus.wantToRead) == BookStatus.completed,
+            isActive: (_selectedStatus ?? BookStatus.wantToRead) ==
+                BookStatus.completed,
             onTap: () {
               setState(() {
                 _selectedStatus = BookStatus.completed;
@@ -412,47 +428,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
     );
   }
 
-  Widget _buildMemoFilter() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          PillFilterButton(
-            label: MemoFilter.myMemos.label,
-            isActive: _selectedFilter == MemoFilter.myMemos,
-            onTap: () {
-              setState(() {
-                _selectedFilter = MemoFilter.myMemos;
-              });
-            },
-            width: 90,
-            fontSize: 16,
-            activeFontWeight: FontWeight.w400,
-            inactiveFontWeight: FontWeight.w400,
-          ),
-          const SizedBox(width: 12),
-          PillFilterButton(
-            label: MemoFilter.all.label,
-            isActive: _selectedFilter == MemoFilter.all,
-            onTap: () {
-              setState(() {
-                _selectedFilter = MemoFilter.all;
-              });
-            },
-            width: 104,
-            fontSize: 16,
-            activeFontWeight: FontWeight.w400,
-            inactiveFontWeight: FontWeight.w400,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMemosSection(Book book) {
-    final memosAsyncValue = ref.watch(bookMemosProvider(book.id));
-    final currentUserId = ref.watch(authProvider).value?.id;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -471,332 +447,12 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         ),
         const SizedBox(
             height: 20), // 피그마: 책 메모 타이틀 끝(3383) ~ 메모 필터(3403) = 20px
-        // 메모 필터 (타이틀 밑)
-        _buildMemoFilter(),
-        const SizedBox(
-            height: 32), // 피그마: 메모 필터 끝(3443) ~ 첫 번째 메모 카드(3475) = 32px
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // 반응형: 화면 너비에서 양쪽 20px씩 제외한 카드 너비
-            final cardWidth = constraints.maxWidth - 40;
-            return memosAsyncValue.when(
-              data: (memos) {
-                // 필터링된 메모
-                final filteredMemos = _selectedFilter.filterMemos(memos, currentUserId);
-
-                if (filteredMemos.isEmpty) {
-                  return _buildEmptyMemos();
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: filteredMemos
-                        .map((memo) => _buildMemoCard(memo, cardWidth))
-                        .toList(),
-                  ),
-                );
-              },
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFFECECEC),
-                  ),
-                ),
-              ),
-              error: (error, stack) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '메모를 불러올 수 없습니다: $error',
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontFamily: 'Pretendard',
-                  ),
-                ),
-              ),
-            );
-          },
+        // MemoListView 컴포넌트 사용 (필터 버튼 포함)
+        MemoListView(
+          bookId: book.id,
+          showFilterButtons: true,
         ),
       ],
-    );
-  }
-
-  Widget _buildMemoCard(Memo memo, double cardWidth) {
-    final hasImage = memo.imageUrl != null && memo.imageUrl!.isNotEmpty;
-
-    return GestureDetector(
-      onTap: () => context.push('/memos/detail/${memo.id}'),
-      child: Container(
-        width: cardWidth,
-        margin: const EdgeInsets.only(bottom: 40),
-        padding: EdgeInsets.zero,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: hasImage
-            ? _buildMemoCardWithImage(memo)
-            : _buildMemoCardTextOnly(memo),
-      ),
-    );
-  }
-
-  Widget _buildMemoCardTextOnly(Memo memo) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.zero, // 피그마: 메모 카드에 padding 없음
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 사용자 정보
-          Row(
-            children: [
-              // 아바타
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey.shade800,
-                ),
-                child: ClipOval(
-                  child: memo.userAvatarUrl != null &&
-                          memo.userAvatarUrl!.isNotEmpty
-                      ? Image.network(
-                          memo.userAvatarUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.person, color: Colors.grey),
-                        )
-                      : const Icon(Icons.person, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // 닉네임 및 시간
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      memo.userNickname ?? 'User',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w300,
-                        fontSize: 16,
-                        height: 24 / 16,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      timeago.format(memo.createdAt, locale: 'ko'),
-                      style: const TextStyle(
-                        color: Color(0xFF838383),
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w300,
-                        fontSize: 16,
-                        height: 24 / 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // 메모 내용
-          Text(
-            memo.content,
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w400,
-              fontSize: 16,
-              height: 24 / 16,
-            ),
-          ),
-          const SizedBox(height: 16),
-          // 책 제목 및 페이지
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  memo.bookTitle,
-                  style: const TextStyle(
-                    color: Color(0xFF838383),
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w300,
-                    fontSize: 16,
-                    height: 24 / 16,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (memo.page != null)
-                Text(
-                  'p ${memo.page}',
-                  style: const TextStyle(
-                    color: Color(0xFF838383),
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w300,
-                    fontSize: 16,
-                    height: 24 / 16,
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMemoCardWithImage(Memo memo) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.zero, // 피그마: 메모 카드에 padding 없음
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 사용자 정보
-          Row(
-            children: [
-              // 아바타
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey.shade800,
-                ),
-                child: ClipOval(
-                  child: memo.userAvatarUrl != null &&
-                          memo.userAvatarUrl!.isNotEmpty
-                      ? Image.network(
-                          memo.userAvatarUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.person, color: Colors.grey),
-                        )
-                      : const Icon(Icons.person, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // 닉네임 및 시간
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      memo.userNickname ?? 'User',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w300,
-                        fontSize: 16,
-                        height: 24 / 16,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      timeago.format(memo.createdAt, locale: 'ko'),
-                      style: const TextStyle(
-                        color: Color(0xFF838383),
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w300,
-                        fontSize: 16,
-                        height: 24 / 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // 메모 내용 및 이미지
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  memo.content,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w400,
-                    fontSize: 16,
-                    height: 24 / 16,
-                  ),
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 15),
-              // 이미지 (80x120)
-              Container(
-                width: 80,
-                height: 120,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey.shade900,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    memo.imageUrl!,
-                    width: 80,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 80,
-                      height: 120,
-                      color: Colors.grey.shade900,
-                      child: const Icon(
-                        Icons.image,
-                        color: Colors.grey,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // 책 제목 및 페이지
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  memo.bookTitle,
-                  style: const TextStyle(
-                    color: Color(0xFF838383),
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w300,
-                    fontSize: 16,
-                    height: 24 / 16,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (memo.page != null)
-                Text(
-                  'p ${memo.page}',
-                  style: const TextStyle(
-                    color: Color(0xFF838383),
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w300,
-                    fontSize: 16,
-                    height: 24 / 16,
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -825,40 +481,6 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyMemos() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.note_add,
-            color: Colors.grey,
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '아직 메모가 없습니다',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Pretendard',
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '첫 번째 메모를 작성해보세요',
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 14,
-              fontFamily: 'Pretendard',
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -58,6 +58,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           }
         });
       }
+      // 뒤로가기 후 동기화 제거: GoRouter가 페이지를 캐싱하므로 상태가 유지됨
+      // 실제 데이터 변경 시에만 동기화 필요 (예: 책 목록 변경)
     });
 
     // 온보딩에서 온 경우 자동으로 책 검색 화면으로 이동
@@ -154,37 +156,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return ValueListenableBuilder<bool>(
       valueListenable: _isHorizontalDraggingNotifier,
       builder: (context, isHorizontalDragging, _) {
-        return CustomScrollView(
+    return CustomScrollView(
           controller: _scrollController,
           physics: isHorizontalDragging
               ? const NeverScrollableScrollPhysics()
               : const ClampingScrollPhysics(),
-          slivers: [
-            // 앱바 (고정)
-            SliverAppBar(
-              pinned: true,
-              floating: false,
-              elevation: 0,
-              backgroundColor: const Color(0xFF181818),
+      slivers: [
+        // 앱바 (고정)
+        SliverAppBar(
+          pinned: true,
+          floating: false,
+          elevation: 0,
+          backgroundColor: const Color(0xFF181818),
               surfaceTintColor: Colors.transparent, // Material 3에서 배경색 변경 방지
-              automaticallyImplyLeading: false,
-              toolbarHeight: 64,
+          automaticallyImplyLeading: false,
+          toolbarHeight: 64,
               flexibleSpace: Container(
                 color: const Color(0xFF181818), // 배경색 명시적으로 설정
                 child: _buildAppBar(),
               ),
-            ),
-            // 프로필 영역
+        ),
+        // 프로필 영역
             const SliverToBoxAdapter(
               child: HomeProfileSection(),
-            ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 34), // Figma: 프로필과 "읽고 있는 책" 타이틀 사이 34px
-            ),
+        ),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 34), // Figma: 프로필과 "읽고 있는 책" 타이틀 사이 34px
+        ),
 
-            // Reading 섹션 (Sticky 효과)
-            SliverPersistentHeader(
-              pinned: true,
+        // Reading 섹션 (Sticky 효과)
+        SliverPersistentHeader(
+          pinned: true,
               delegate: ReadingSectionDelegate(
                 expandedChild: ReadingBooksSection(
                   books: books,
@@ -202,10 +204,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 height: 28.0 +
                     16.0 +
                     191.0, // 제목(28px) + 간격(16px) + 책 높이(191px) = 235px
-              ),
-            ),
+          ),
+        ),
             // Reading 섹션과 Memo 섹션 사이 간격 (Reading 섹션이 축소될 때도 유지)
-            const SliverToBoxAdapter(
+        const SliverToBoxAdapter(
               child: SizedBox(
                 height: 32,
                 child: ClipRect(
@@ -213,16 +215,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: SizedBox.shrink(),
                 ),
               ),
-            ),
+        ),
 
-            // Memo 섹션
-            SliverToBoxAdapter(
+        // Memo 섹션
+        SliverToBoxAdapter(
               child: HomeMemoSection(books: books),
-            ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100), // 하단 네비게이션 바 공간
-            ),
-          ],
+        ),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 100), // 하단 네비게이션 바 공간
+        ),
+      ],
         );
       },
     );

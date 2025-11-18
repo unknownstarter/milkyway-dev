@@ -102,6 +102,15 @@ final router = GoRouter(
       builder: (context, state) => const ProfileEditScreen(),
     ),
     
+    // 메모 상세 화면 (ShellRoute 밖 - 하단 네비게이션바 없음)
+    GoRoute(
+      path: '${AppRoutes.memoDetail}/:id',
+      name: AppRoutes.memoDetailName,
+      builder: (context, state) => MemoDetailScreen(
+        memoId: state.pathParameters['id']!,
+      ),
+    ),
+    
     // 메인 앱 Shell (BottomNavigationBar 포함)
     ShellRoute(
       builder: (context, state, child) => MainShell(
@@ -143,13 +152,6 @@ final router = GoRouter(
           name: AppRoutes.memosName,
           pageBuilder: (context, state) => const NoTransitionPage(
             child: MemoListScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '${AppRoutes.memoDetail}/:id',
-          name: AppRoutes.memoDetailName,
-          builder: (context, state) => MemoDetailScreen(
-            memoId: state.pathParameters['id']!,
           ),
         ),
         GoRoute(

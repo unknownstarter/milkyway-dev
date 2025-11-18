@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/memo_list.dart';
 import '../../../../core/presentation/widgets/empty_book_card.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
-import '../../../../core/presentation/widgets/common_app_bar.dart';
 import '../../../../core/presentation/widgets/add_floating_action_button.dart';
 
 class MemoListScreen extends ConsumerWidget {
@@ -14,7 +13,23 @@ class MemoListScreen extends ConsumerWidget {
     final booksAsync = ref.watch(userBooksProvider);
     return Scaffold(
       backgroundColor: const Color(0xFF181818),
-      appBar: const CommonAppBar(title: '메모'),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF181818),
+        surfaceTintColor: Colors.transparent, // Material 3에서 스크롤 시 색상 변경 방지
+        elevation: 0,
+        title: const Text(
+          'My Memo',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+            height: 28 / 20,
+          ),
+        ),
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       // MainShell에서 이미 bottomNavigationBar를 제공하므로 제거
       body: booksAsync.when(
         loading: () => const Center(
