@@ -64,7 +64,7 @@ class _MemoListState extends ConsumerState<MemoList> {
       // 메모 ID 집합으로 실제 변경 여부 확인
       final currentMemoIds = memos.map((m) => m.id).toSet();
       if (_cachedMemoIds == currentMemoIds) {
-        return _cachedFilteredMemos!;
+      return _cachedFilteredMemos!;
       }
     }
 

@@ -152,7 +152,7 @@ class CollapsedReadingBooksSection extends ConsumerWidget {
       child: SizedBox(
         height: cardHeight,
         width: double.infinity,
-          child: Padding(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: GestureDetector(
             onTap: () {
@@ -366,12 +366,12 @@ class _BookSwipeViewState extends ConsumerState<_BookSwipeView> {
       if (next != null && 
           next != _lastSyncedBookId &&
           widget.pageController.hasClients) {
-        final selectedIndex = widget.books.indexWhere(
+            final selectedIndex = widget.books.indexWhere(
           (book) => book.id == next,
-        );
-        if (selectedIndex != -1) {
-          final currentPage = widget.pageController.page?.round() ?? 0;
-          if (currentPage != selectedIndex) {
+            );
+            if (selectedIndex != -1) {
+              final currentPage = widget.pageController.page?.round() ?? 0;
+              if (currentPage != selectedIndex) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && widget.pageController.hasClients) {
                 widget.pageController.jumpToPage(selectedIndex);

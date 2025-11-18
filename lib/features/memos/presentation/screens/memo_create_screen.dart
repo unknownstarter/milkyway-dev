@@ -5,10 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../providers/memo_form_provider.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
 import '../../../../core/providers/analytics_provider.dart';
+import '../../domain/models/memo_visibility.dart';
+import '../widgets/memo_visibility_toggle.dart';
+import '../widgets/memo_content_input.dart';
+import '../widgets/memo_page_input.dart';
+import '../widgets/memo_image_selector.dart';
+import '../../utils/memo_image_uploader.dart';
+import '../../utils/memo_error_handler.dart';
 
 class MemoCreateScreen extends ConsumerStatefulWidget {
   final String? bookId;
@@ -30,12 +36,21 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
   String? _selectedImagePath;
   bool _isLoading = false;
   String? _selectedBookId;
+  bool _isPublic = true; // 공개/비공개 토글 상태 (기본값: 공개)
 
   @override
   void initState() {
     super.initState();
     _selectedBookId = widget.bookId;
+    _contentController.addListener(() => setState(() {}));
     ref.read(analyticsProvider).logScreenView('memo_create_screen');
+  }
+
+  // 필수값이 모두 채워졌는지 확인
+  bool get _isFormValid {
+    return _selectedBookId != null && 
+           _selectedBookId!.isNotEmpty &&
+           _contentController.text.trim().isNotEmpty;
   }
 
   @override
@@ -51,14 +66,8 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
       backgroundColor: const Color(0xFF181818),
       appBar: AppBar(
         backgroundColor: const Color(0xFF181818),
-        title: const Text(
-          '메모 작성',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
@@ -69,21 +78,21 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
             }
           },
         ),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveMemo,
-            child: Text(
-              '저장',
+        title: const Text(
+          '메모 작성',
               style: TextStyle(
-                color: _isLoading ? Colors.grey : const Color(0xFF48FF00),
+            color: Colors.white,
                 fontFamily: 'Pretendard',
-                fontWeight: FontWeight.bold,
-              ),
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+            height: 28 / 20,
             ),
           ),
-        ],
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,22 +101,67 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
             _buildBookSelector(),
             const SizedBox(height: 20),
 
-            // 페이지 입력
-            _buildPageInput(),
+                // 메모 공개 선택 (토글)
+                MemoVisibilityToggle(
+                  value: _isPublic,
+                  onChanged: (value) {
+                    setState(() {
+                      _isPublic = value;
+                    });
+                  },
+                ),
             const SizedBox(height: 20),
 
             // 메모 내용
-            _buildContentInput(),
+                MemoContentInput(controller: _contentController),
+                const SizedBox(height: 20),
+
+                // 페이지 입력
+                MemoPageInput(controller: _pageController),
             const SizedBox(height: 20),
 
             // 이미지 선택
-            _buildImageSelector(),
-            const SizedBox(height: 20),
-
-            // 선택된 이미지
-            if (_selectedImagePath != null) _buildSelectedImage(),
+                MemoImageSelector(
+                  imagePath: _selectedImagePath,
+                  onSelectImage: _selectImage,
+                  onRemoveImage: _removeImage,
+                ),
+                const SizedBox(height: 100), // 하단 버튼 공간 확보
+              ],
+            ),
+          ),
+          // 하단 고정 저장하기 버튼 (책 상세의 메모하기와 동일한 스타일)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              bottom: false, // SafeArea를 false로 하여 하단까지 확장
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 불투명 배경 (181818 색상으로 버튼 뒤와 아래 영역 모두 가리기)
+                  Container(
+                    color: const Color(0xFF181818),
+                    padding: const EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      top: 20,
+                      bottom: 20,
+                    ),
+                    child: _buildSaveButton(),
+                  ),
+                  // 하단 영역까지 181818로 가리기
+                  Container(
+                    color: const Color(0xFF181818),
+                    height: MediaQuery.of(context).padding.bottom,
+                  ),
           ],
         ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -122,9 +176,10 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
           '책 선택',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 16,
+            fontSize: 20,
             fontWeight: FontWeight.w600,
             fontFamily: 'Pretendard',
+            height: 28 / 20,
           ),
         ),
         const SizedBox(height: 8),
@@ -144,18 +199,33 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
   Widget _buildBookDropdown(List<dynamic> books) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      height: 62,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade800),
+        border: Border.all(color: const Color(0xFF646464)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedBookId,
           isExpanded: true,
-          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontSize: 16,
+          ),
           dropdownColor: const Color(0xFF1A1A1A),
+          hint: _selectedBookId == null
+              ? const Text(
+                  '어떤 책을 읽고 있나요?',
+                  style: TextStyle(
+                    color: Color(0xFF838383),
+                    fontFamily: 'Pretendard',
+                    fontSize: 16,
+                  ),
+                )
+              : null,
           items: books.map((book) {
             return DropdownMenuItem<String>(
               value: book.id,
@@ -167,170 +237,44 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
               _selectedBookId = value;
             });
           },
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: Colors.white,
+            size: 24,
+          ),
+          menuMaxHeight: 400, // 드롭다운 최대 높이 설정
         ),
       ),
     );
   }
 
-  Widget _buildPageInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '페이지 (선택사항)',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Pretendard',
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _pageController,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
-          decoration: InputDecoration(
-            hintText: '예: 42',
-            hintStyle: TextStyle(
-                color: Colors.grey.shade400, fontFamily: 'Pretendard'),
-            filled: true,
-            fillColor: const Color(0xFF1A1A1A),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade800),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade800),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF48FF00)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildContentInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '메모 내용',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Pretendard',
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _contentController,
-          maxLines: 8,
-          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
-          decoration: InputDecoration(
-            hintText: '읽은 내용이나 생각을 적어보세요...',
-            hintStyle: TextStyle(
-                color: Colors.grey.shade400, fontFamily: 'Pretendard'),
-            filled: true,
-            fillColor: const Color(0xFF1A1A1A),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade800),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade800),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF48FF00)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildImageSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '이미지 (선택사항)',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Pretendard',
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _selectImage,
-                icon: const Icon(Icons.add_photo_alternate,
-                    color: Color(0xFF48FF00)),
-                label: const Text(
-                  '이미지 추가',
-                  style: TextStyle(
-                    color: Color(0xFF48FF00),
-                    fontFamily: 'Pretendard',
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF48FF00)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            if (_selectedImagePath != null) ...[
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                onPressed: _removeImage,
-                icon: const Icon(Icons.delete, color: Colors.red),
-                label: const Text(
-                  '제거',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontFamily: 'Pretendard',
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSelectedImage() {
+  Widget _buildSaveButton() {
+    final isEnabled = _isFormValid && !_isLoading;
+    
     return Container(
       width: double.infinity,
-      height: 200,
+      height: 41,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade800),
+        color: isEnabled ? const Color(0xFFDEDEDE) : const Color(0xFF838383),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          File(_selectedImagePath!),
-          fit: BoxFit.cover,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isEnabled ? _saveMemo : null,
+          borderRadius: BorderRadius.circular(20),
+          child: Center(
+            child: Text(
+              '저장하기',
+              style: TextStyle(
+                color: isEnabled ? Colors.black : Colors.white,
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                height: 24 / 16,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -341,6 +285,7 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
       final picker = ImagePicker();
       final source = await showDialog<ImageSource>(
         context: context,
+        barrierColor: Colors.black.withOpacity(0.5), // 어두운 딤 처리
         builder: (context) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
           title: const Text('이미지 선택', style: TextStyle(color: Colors.white)),
@@ -378,48 +323,17 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
           }
         } on PlatformException catch (e) {
           if (mounted) {
-            String errorMessage = '카메라 접근 중 오류가 발생했습니다';
-            if (e.code == 'camera_access_denied') {
-              errorMessage = '카메라 접근 권한이 거부되었습니다';
-            } else if (e.code == 'camera_unavailable') {
-              errorMessage = '카메라를 사용할 수 없습니다\n(시뮬레이터에서는 카메라를 사용할 수 없습니다)';
-            } else if (e.message != null && e.message!.isNotEmpty) {
-              errorMessage = '카메라 오류: ${e.message}';
-            }
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorMessage),
-                backgroundColor: const Color(0xFF242424),
-                duration: const Duration(seconds: 4),
-              ),
-            );
+            MemoErrorHandler.showError(context, e);
           }
         } catch (e) {
-          // PlatformException이 아닌 다른 예외 처리 (크래시 방지)
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  '카메라를 사용할 수 없습니다\n(시뮬레이터에서는 카메라를 사용할 수 없습니다)',
-                ),
-                backgroundColor: Color(0xFF242424),
-                duration: Duration(seconds: 4),
-              ),
-            );
+            MemoErrorHandler.showError(context, e);
           }
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '이미지 선택 중 오류가 발생했습니다: ${e.toString()}',
-            ),
-            backgroundColor: const Color(0xFF242424),
-          ),
-        );
+        MemoErrorHandler.showError(context, e);
       }
     }
   }
@@ -431,24 +345,16 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
   }
 
   Future<void> _saveMemo() async {
+    // 필수값 검증 (이미 버튼에서 체크하지만 이중 체크)
+    if (!_isFormValid) {
+      if (_selectedBookId == null || _selectedBookId!.isEmpty) {
+        MemoErrorHandler.showErrorSnackBar(context, '책을 선택해주세요');
+        return;
+      }
     if (_contentController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('메모 내용을 입력해주세요'),
-          backgroundColor: Color(0xFF242424),
-        ),
-      );
+        MemoErrorHandler.showErrorSnackBar(context, '메모 내용을 입력해주세요');
       return;
     }
-
-    if (_selectedBookId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('책을 선택해주세요'),
-          backgroundColor: Color(0xFF242424),
-        ),
-      );
-      return;
     }
 
     setState(() {
@@ -456,16 +362,28 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
     });
 
     try {
-      if (_selectedBookId == null) {
-        throw Exception('책을 선택해주세요');
+      final visibility = _isPublic ? MemoVisibility.public : MemoVisibility.private;
+      
+      // 이미지가 로컬 파일 경로인 경우 Supabase Storage에 업로드
+      String? imageUrl = _selectedImagePath;
+      if (MemoImageUploader.isLocalFile(_selectedImagePath)) {
+        imageUrl = await MemoImageUploader.uploadImage(_selectedImagePath!);
+        if (imageUrl == null) {
+          if (mounted) {
+            MemoErrorHandler.showErrorSnackBar(context, '이미지 업로드에 실패했습니다');
       }
+          return;
+        }
+      }
+      
       await ref.read(memoFormProvider(_selectedBookId!).notifier).createMemo(
             bookId: _selectedBookId!,
             content: _contentController.text.trim(),
             page: _pageController.text.isNotEmpty
                 ? int.tryParse(_pageController.text)
                 : null,
-            imageUrl: _selectedImagePath,
+            imageUrl: imageUrl,
+            visibility: visibility,
           );
 
       if (mounted) {
@@ -479,12 +397,7 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('메모 저장 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
-          ),
-        );
+        MemoErrorHandler.showError(context, e);
       }
     } finally {
       if (mounted) {

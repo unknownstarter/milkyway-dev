@@ -58,6 +58,55 @@ class _ProfileContent extends StatelessWidget {
   final dynamic user;
   const _ProfileContent({required this.user});
 
+  void _showFeedbackModal(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '피드백 모달',
+      barrierColor: Colors.black.withOpacity(0.5), // 어두운 딤 처리
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOut,
+          )),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Material(
+              color: Colors.transparent,
+              child: GestureDetector(
+                onTap: () {}, // 바텀시트 내부 탭은 무시
+                child: Container(
+                  width: double.infinity,
+                  height: screenHeight * 0.5,
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom,
+                    ),
+                    child: const FeedbackModal(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -162,15 +211,7 @@ class _ProfileContent extends StatelessWidget {
                     Icons.chevron_right,
                     color: Colors.white,
                   ),
-                  onTap: () => showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.black,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    builder: (context) => const FeedbackModal(),
-                  ),
+                  onTap: () => _showFeedbackModal(context),
                 ),
                 Divider(color: Colors.grey.shade800, height: 1),
                 ListTile(

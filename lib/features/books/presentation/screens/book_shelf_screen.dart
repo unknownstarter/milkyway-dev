@@ -71,7 +71,7 @@ class _BookShelfScreenState extends ConsumerState<BookShelfScreen> {
       final cachedIds = _cachedAllBooks!.map((b) => b.id).toSet();
       final currentIds = books.map((b) => b.id).toSet();
       if (cachedIds == currentIds) {
-        return _cachedFilteredBooks!;
+      return _cachedFilteredBooks!;
       }
     }
 

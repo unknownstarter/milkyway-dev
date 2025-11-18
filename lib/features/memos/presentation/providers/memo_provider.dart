@@ -189,7 +189,7 @@ final paginatedMemosProvider = StateNotifierProvider.family<
 Future<String?> _uploadMemoImage(String filePath) async {
   try {
     final userId = Supabase.instance.client.auth.currentUser!.id;
-    final fileName = '${userId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
     final file = File(filePath);
 
     await Supabase.instance.client.storage

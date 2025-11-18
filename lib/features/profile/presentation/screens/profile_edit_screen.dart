@@ -65,7 +65,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             child: Text(
               '저장',
               style: TextStyle(
-                color: _isLoading ? Colors.grey : const Color(0xFF48FF00),
+                color: _isLoading ? Colors.grey : Colors.white,
                 fontFamily: 'Pretendard',
                 fontWeight: FontWeight.bold,
               ),
@@ -105,12 +105,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           child: Container(
             width: 120,
             height: 120,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF48FF00),
-                width: 3,
-              ),
             ),
             child: ClipOval(
               child: _getProfileImage(currentImageUrl),
@@ -120,11 +116,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         const SizedBox(height: 16),
         TextButton.icon(
           onPressed: _selectImage,
-          icon: const Icon(Icons.camera_alt, color: Color(0xFF48FF00)),
+          icon: const Icon(Icons.camera_alt, color: Colors.white),
           label: const Text(
             '프로필 사진 변경',
             style: TextStyle(
-              color: Color(0xFF48FF00),
+              color: Colors.white,
               fontFamily: 'Pretendard',
             ),
           ),
@@ -197,6 +193,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: _nicknameController,
+          cursorColor: Colors.white,
           style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
           decoration: InputDecoration(
             hintText: '닉네임을 입력하세요',
@@ -213,7 +210,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF48FF00)),
+              borderSide: const BorderSide(color: Colors.white),
             ),
           ),
         ),

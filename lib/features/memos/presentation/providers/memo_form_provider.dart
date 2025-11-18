@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/memo.dart';
+import '../../domain/models/memo_visibility.dart';
 import '../../data/repositories/memo_repository.dart' as memo;
 import '../providers/memo_provider.dart';
 
@@ -55,8 +56,7 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
           imageUrl: null,
         );
       } else {
-        print(
-            'Creating memo with: bookId=$bookId, content=${contentController.text}, page=$page');
+        log('Creating memo with: bookId=$bookId, content=${contentController.text}, page=$page');
         await _repository.createMemo(
           bookId: bookId,
           content: contentController.text,
@@ -98,6 +98,7 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
     required String content,
     int? page,
     String? imageUrl,
+    MemoVisibility visibility = MemoVisibility.private,
   }) async {
     if (content.isEmpty) return false;
 
@@ -109,6 +110,7 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
         content: content,
         page: page,
         imageUrl: imageUrl,
+        visibility: visibility,
       );
       ref.invalidate(bookMemosProvider(bookId));
       ref.invalidate(recentMemosProvider);
@@ -125,6 +127,7 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
     required String content,
     int? page,
     String? imageUrl,
+    MemoVisibility? visibility,
   }) async {
     if (content.isEmpty) return false;
 
@@ -136,6 +139,7 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
         content: content,
         page: page,
         imageUrl: imageUrl,
+        visibility: visibility,
       );
       ref.invalidate(bookMemosProvider(bookId));
       ref.invalidate(recentMemosProvider);

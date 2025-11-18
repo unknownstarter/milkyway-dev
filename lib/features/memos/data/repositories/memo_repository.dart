@@ -45,7 +45,9 @@ class MemoRepository {
             nickname,
             picture_url
           )
-        ''').eq('book_id', bookId).order('created_at', ascending: false);
+        ''').eq('book_id', bookId)
+        .eq('user_id', _client.auth.currentUser!.id) // 현재 사용자의 메모만 가져오기
+        .order('created_at', ascending: false);
 
     return response.map((json) => Memo.fromJson(json)).toList();
   }
@@ -55,15 +57,16 @@ class MemoRepository {
     required String content,
     int? page,
     String? imageUrl,
+    MemoVisibility visibility = MemoVisibility.private,
   }) async {
-    log('Creating memo with imageUrl: $imageUrl');
+    log('Creating memo with imageUrl: $imageUrl, visibility: ${visibility.value}');
     await _client.from('memos').insert({
       'book_id': bookId,
       'user_id': _client.auth.currentUser!.id,
       'content': content,
       'page': page,
       'image_url': imageUrl,
-      'visibility': MemoVisibility.private.value,
+      'visibility': visibility.value,
       'created_at': DateTime.now().toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
     });
@@ -74,13 +77,20 @@ class MemoRepository {
     required String content,
     int? page,
     String? imageUrl,
+    MemoVisibility? visibility,
   }) async {
-    await _client.from('memos').update({
+    final updateData = <String, dynamic>{
       'content': content,
       'page': page,
       'image_url': imageUrl,
       'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', memoId);
+    };
+    
+    if (visibility != null) {
+      updateData['visibility'] = visibility.value;
+    }
+    
+    await _client.from('memos').update(updateData).eq('id', memoId);
   }
 
   Future<void> deleteMemo(String memoId) async {

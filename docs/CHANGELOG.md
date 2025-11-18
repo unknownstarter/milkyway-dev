@@ -3,8 +3,163 @@
 ## 📋 버전 관리
 
 **현재 버전:** 1.0.0-dev  
-**최종 업데이트:** 2025-11-11  
+**최종 업데이트:** 2025-11-18  
 **개발 상태:** 개발 중
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-18
+
+### 🎨 메모 상세 화면 피그마 디자인 적용 및 UI 개선 (2025-11-18)
+
+#### 📱 메모 상세 화면 (memo_detail_screen) 피그마 디자인 적용
+- **피그마 디자인 완전 반영** - 채널 bakpa59c, renewal milkyway → memo_detail_screen 프레임 기반 UI 구현
+- **미트볼 옵션 아이콘 추가** - 우측 상단에 미트볼 아이콘(`Icons.more_horiz`) 추가
+  - 메모의 owner 유저에게만 표시 (`authProvider`로 현재 사용자 ID 확인)
+  - `memo.userId`와 현재 사용자 ID 비교하여 조건부 표시
+- **옵션 바텀시트 구현** - 미트볼 아이콘 탭 시 바텀시트 표시
+  - "수정하기", "삭제하기" 옵션 제공
+  - `showGeneralDialog`로 최상위 레이어에 표시
+  - 딤 처리 및 슬라이드 애니메이션 적용
+- **레이아웃 재구성** - 피그마 디자인에 맞게 완전 재구성
+  - 이미지 (있는 경우) → 사용자 정보 → 메모 내용 → 책 정보 순서
+  - 이미지: 정사각형 (`AspectRatio` 1:1)
+  - 사용자 정보: 아바타 (40x40) + 닉네임 + 상대 시간 ("2d ago" 형식, timeago 패키지 사용)
+  - 메모 내용: 회색 박스 제거, 흰색 텍스트 (Pretendard Regular 400, 16px, lineHeight 24px)
+  - 책 정보: 책 제목 + 페이지 번호 (있는 경우 "p 1231" 형식)
+- **하단 수정/삭제 버튼 제거** - 모든 액션은 미트볼 옵션 바텀시트에서 처리
+
+#### 🔒 메모 필터링 보안 강화
+- **Home 화면 메모 필터링 수정** - `getBookMemos`에 현재 사용자 필터 추가
+  - `.eq('user_id', _client.auth.currentUser!.id)` 조건 추가
+  - 이제 Home 화면에서 선택한 책의 메모는 현재 사용자가 작성한 메모만 표시
+  - `memo_list_screen`은 이미 `getPaginatedMemos`에서 사용자 필터가 적용되어 있어 안전
+
+#### 🎨 프로필 수정 화면 UI 개선
+- **프로필 이미지 형광 테두리 제거** - `Border.all(color: Color(0xFF48FF00), width: 3)` 제거
+- **프로필 사진 변경 아이콘 및 텍스트 색상 변경** - 형광 녹색(`#48FF00`) → 흰색
+- **우측 상단 저장 버튼 색상 변경** - 형광 녹색(`#48FF00`) → 흰색
+  - 로딩 중일 때는 `Colors.grey` 유지
+
+#### 🎨 입력 필드 활성화 테두리 색상 통일
+- **모든 입력 필드의 `focusedBorder` 색상 변경** - 형광 녹색(`#48FF00`) → 흰색
+- **적용된 화면**:
+  - 프로필 수정 화면 (닉네임 입력 필드)
+  - 메모 작성/편집 화면 (메모 내용, 페이지 입력 필드)
+  - 책 검색 화면 (검색 입력 필드)
+  - 온보딩 닉네임 화면 (닉네임 입력 필드)
+
+#### 📝 수정된 파일
+- `lib/features/memos/presentation/screens/memo_detail_screen.dart` - 피그마 디자인 적용, 미트볼 옵션 추가, 레이아웃 재구성
+- `lib/features/memos/data/repositories/memo_repository.dart` - `getBookMemos`에 사용자 필터 추가
+- `lib/features/profile/presentation/screens/profile_edit_screen.dart` - 형광 녹색 제거, 흰색으로 통일
+- `lib/features/memos/presentation/widgets/memo_page_input.dart` - `focusedBorder` 색상 변경
+- `lib/features/memos/presentation/widgets/memo_content_input.dart` - `focusedBorder` 색상 변경
+- `lib/features/books/presentation/screens/book_search_screen.dart` - `focusedBorder` 색상 변경
+- `lib/features/onboarding/presentation/screens/nickname_screen.dart` - `focusedBorder` 색상 변경
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-18
+
+### 🎨 바텀시트 UI 개선 및 에러 수정 (2025-11-18)
+
+#### 📱 바텀시트 네비게이션 바 가리기 구현
+- **showGeneralDialog로 전환** - `showModalBottomSheet` 대신 `showGeneralDialog` 사용하여 최상위 레이어에 표시
+  - 네비게이션 바를 포함한 모든 위젯 위에 바텀시트 표시
+  - 딤 처리 레이어가 전체 화면을 덮도록 구현
+  - `useRootNavigator: true` 설정으로 최상위 Navigator 사용
+- **슬라이드 애니메이션** - 아래에서 위로 부드러운 슬라이드 애니메이션 적용
+- **바텀시트 높이 조정** - 플로팅 버튼 바텀시트 높이를 화면 높이의 30%로 설정
+- **Material 위젯 추가** - `ListTile`과 `TextField`가 정상 동작하도록 `Material` 위젯으로 감싸기
+  - `color: Colors.transparent`로 배경색은 내부 Container에서 처리
+- **오버플로우 방지** - `SingleChildScrollView` 추가하여 스크롤 가능하도록 개선
+- **적용된 화면**:
+  - 플로팅 액션 버튼 바텀시트 (`add_floating_action_button.dart`)
+  - 피드백 모달 (`profile_screen.dart`)
+
+#### 🐛 에러 수정
+- **"No Material widget found" 에러 해결** - `showGeneralDialog` 사용 시 `Material` 위젯 추가
+- **"BOTTOM OVERFLOWED" 에러 해결** - `SingleChildScrollView` 추가 및 높이 조정
+- **바텀시트 높이 문제 해결** - `maxHeight` 대신 `height`를 명시적으로 설정
+
+#### 📝 수정된 파일
+- `lib/core/presentation/widgets/add_floating_action_button.dart` - showGeneralDialog로 전환, Material 위젯 추가, 높이 조정
+- `lib/features/home/presentation/widgets/add_action_modal.dart` - 불필요한 패딩 제거
+- `lib/features/profile/presentation/screens/profile_screen.dart` - showGeneralDialog로 전환, Material 위젯 추가
+- `lib/features/profile/presentation/widgets/feedback_modal.dart` - 높이 조정, 구조 개선
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-18
+
+### 🎨 메모 작성/편집 화면 UI 개선 및 기능 강화 (2025-11-18)
+
+#### ✏️ 메모 작성 화면 (create_memo_screen) 완전 재구성
+- **Figma 디자인 완전 반영** - renewal milkyway → create memo 프레임 기반 UI 구현
+- **공개/비공개 토글 추가** - 메모 공개 선택 스위치 추가 (기본값: 공개)
+  - "이 스위치를 켜면 메모가 공개돼요" 설명 텍스트
+  - `MemoVisibility` enum을 사용하여 DB에 저장
+- **메모 내용 글자 수 제한** - 최대 200자 제한 및 실시간 카운터 표시 (0/200)
+- **입력 필드 순서 조정** - 책 선택 → 메모 공개 선택 → 메모 내용 → 페이지 숫자 → 이미지
+- **저장하기 버튼 개선**:
+  - 우측 상단 저장 버튼 제거
+  - 하단 고정 버튼으로 변경 (책 상세의 메모하기 버튼과 동일한 스타일)
+  - 필수값(책 선택, 메모 내용) 미입력 시 비활성화 (회색 배경)
+  - 필수값 입력 시 활성화 (하얀색 배경, 검정 텍스트)
+  - 하단 배경 181818 색상으로 처리 (책 상세와 동일)
+- **책 선택 초기값** - 책 상세에서 진입 시 해당 책 미리 선택, 아니면 플레이스홀더 표시
+- **드롭다운 스크롤** - 책 목록이 길어도 스크롤 가능하도록 `menuMaxHeight: 400` 설정
+- **이미지 선택 개선**:
+  - 이미지 영역을 다시 누르면 이미지 픽커 열림 (이미지 변경 가능)
+  - 우측 상단 'x' 버튼으로 이미지 삭제
+- **Repository 및 Provider 수정**:
+  - `MemoRepository.createMemo()`에 `visibility` 파라미터 추가
+  - `MemoFormController.createMemo()`에 `visibility` 파라미터 추가
+
+#### 🗑️ 메모 삭제 기능 개선
+- **삭제 다이얼로그 스타일 변경** - 메모 편집의 뒤로가기 팝업과 동일한 스타일 적용
+  - 배경색: `#1A1A1A`
+  - 텍스트 색상: 제목/내용 흰색, 취소 회색, 삭제 빨간색
+- **메모 삭제 로직 구현** - `deleteMemoProvider` 사용 및 모든 관련 provider 무효화
+  - `paginatedMemosProvider(bookId)` 및 `paginatedMemosProvider(null)`
+  - `bookMemosProvider(bookId)`
+  - `recentMemosProvider`, `homeRecentMemosProvider`, `allMemosProvider`
+  - `memoProvider(memoId)` (메모 상세도 무효화)
+- **즉시 반영** - 삭제 후 홈, 책 상세, 내 메모 탭에서 즉시 반영
+
+#### ✏️ 메모 편집 기능 개선
+- **변경사항 감지 로직 개선** - 원본 메모 데이터와 비교하여 실제 변경사항이 있을 때만 뒤로가기 팝업 표시
+  - 원본 데이터 저장 (`_originalContent`, `_originalPage`, `_originalImageUrl`)
+  - 내용, 페이지, 이미지 변경 모두 감지
+  - 변경사항이 없으면 팝업 표시 안 함
+
+#### 📚 책 상세 화면 메모 리스트 개선
+- **하단 여백 조정** - 메모 리스트 하단 여백을 20px → 8px로 조정
+- **빈 상태 아이콘 가려짐 방지** - 빈 상태일 때 하단 padding 120px 추가
+- **기본 필터 변경** - "내가 쓴" 필터를 기본값으로 설정
+
+#### 🎨 UI/UX 개선
+- **입력 필드 커서 색상 변경** - 모든 TextField의 커서 색상을 보라색 → 하얀색으로 변경
+  - 책 검색 입력칸
+  - 메모 작성 화면 (메모 내용, 페이지 숫자)
+  - 메모 편집 화면 (메모 내용, 페이지 숫자)
+  - 프로필 수정 화면 (닉네임 입력칸)
+  - 의견 남기기 바텀시트 입력칸
+- **타이틀-서브 타이틀 간격 조정** - 메모 공개 선택 섹션의 타이틀과 서브 타이틀 간격을 8px → 4px로 조정
+
+#### 📝 수정된 파일
+- `lib/features/memos/presentation/screens/memo_create_screen.dart` - 완전 재구성
+- `lib/features/memos/presentation/screens/memo_detail_screen.dart` - 삭제 다이얼로그 스타일 변경
+- `lib/features/memos/presentation/screens/memo_edit_screen.dart` - 변경사항 감지 로직 개선, 커서 색상 변경
+- `lib/features/memos/presentation/providers/memo_provider.dart` - 삭제 provider 무효화 개선
+- `lib/features/memos/data/repositories/memo_repository.dart` - visibility 파라미터 추가
+- `lib/features/memos/presentation/providers/memo_form_provider.dart` - visibility 파라미터 추가
+- `lib/features/memos/presentation/widgets/memo_list_view.dart` - 하단 여백 조정, 기본 필터 변경
+- `lib/features/books/presentation/screens/book_detail_screen.dart` - 하단 여백 조정
+- `lib/features/books/presentation/screens/book_search_screen.dart` - 커서 색상 변경
+- `lib/features/profile/presentation/screens/profile_edit_screen.dart` - 커서 색상 변경
+- `lib/features/profile/presentation/widgets/feedback_modal.dart` - 커서 색상 변경
 
 ---
 

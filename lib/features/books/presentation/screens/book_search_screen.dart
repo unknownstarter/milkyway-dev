@@ -106,6 +106,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
         controller: _searchController,
         focusNode: _focusNode,
         onChanged: _onSearchChanged,
+        cursorColor: Colors.white,
         style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
         decoration: InputDecoration(
           hintText: '책 제목, 저자, ISBN으로 검색하세요',
@@ -132,7 +133,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF48FF00)),
+            borderSide: const BorderSide(color: Colors.white),
           ),
         ),
       ),

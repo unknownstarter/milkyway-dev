@@ -14,109 +14,109 @@ class FeedbackModal extends ConsumerWidget {
     final textController = TextEditingController();
     final user = ref.read(authProvider).value;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+    return Container(
+      padding: const EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: 20,
       ),
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.5,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '의견 남기기',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '의견 남기기',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: TextField(
-                controller: textController,
-                maxLength: 500,
-                maxLines: null,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: '의견을 입력해주세요',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  counterStyle: const TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: TextField(
+              controller: textController,
+              maxLength: 500,
+              maxLines: null,
+              cursorColor: Colors.white,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: '의견을 입력해주세요',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                filled: true,
+                fillColor: Colors.grey[900],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
+                counterStyle: const TextStyle(color: Colors.grey),
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.grey[800],
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.grey[800],
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      '취소하기',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
+                  ),
+                  child: const Text(
+                    '취소하기',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () async {
-                      if (textController.text.isNotEmpty) {
-                        try {
-                          await _sendFeedbackEmail(
-                            context,
-                            textController.text,
-                            user?.id,
-                            user?.email,
-                          );
-                          Navigator.pop(context);
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('이메일을 보내는 중 오류가 발생했습니다.'),
-                              backgroundColor: Color(0xFF242424),
-                            ),
-                          );
-                        }
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextButton(
+                  onPressed: () async {
+                    if (textController.text.isNotEmpty) {
+                      try {
+                        await _sendFeedbackEmail(
+                          context,
+                          textController.text,
+                          user?.id,
+                          user?.email,
+                        );
+                        Navigator.pop(context);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('이메일을 보내는 중 오류가 발생했습니다.'),
+                            backgroundColor: Color(0xFF242424),
+                          ),
+                        );
                       }
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      '보내기',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                      ),
+                  ),
+                  child: const Text(
+                    '보내기',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

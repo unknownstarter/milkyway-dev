@@ -1,0 +1,68 @@
+import 'package:flutter/material.dart';
+
+/// 메모 페이지 숫자 입력 위젯
+class MemoPageInput extends StatelessWidget {
+  final TextEditingController controller;
+
+  const MemoPageInput({
+    super.key,
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '페이지 숫자 (선택사항)',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+            height: 28 / 20,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          cursorColor: Colors.white,
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontSize: 16,
+          ),
+          decoration: InputDecoration(
+            hintText: '예시: 123 (숫자만 입력 가능해요)',
+            hintStyle: const TextStyle(
+              color: Color(0xFF838383),
+              fontFamily: 'Pretendard',
+              fontSize: 16,
+            ),
+            filled: true,
+            fillColor: const Color(0xFF1A1A1A),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF646464)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF646464)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.white),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 20,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
