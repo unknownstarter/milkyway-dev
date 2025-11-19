@@ -28,12 +28,20 @@ class _HomeMemoSectionState extends ConsumerState<HomeMemoSection> {
     }
 
     final selectedBookId = ref.watch(selectedBookIdProvider);
-    if (selectedBookId == null) {
-      // 선택된 책이 없으면 첫 번째 책 선택 (빌드 완료 후)
-      final firstBook = widget.books[0];
+    
+    // 선택된 책이 없거나 삭제된 책이 선택되어 있으면 첫 번째 책 선택
+    final selectedBook = selectedBookId != null
+        ? widget.books.firstWhere(
+            (book) => book.id == selectedBookId,
+            orElse: () => widget.books[0],
+          )
+        : widget.books[0];
+    
+    if (selectedBookId == null || selectedBook.id != selectedBookId) {
+      // 선택된 책이 없거나 삭제된 책이 선택되어 있으면 첫 번째 책 선택 (빌드 완료 후)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ref.read(selectedBookIdProvider.notifier).state = firstBook.id;
+          ref.read(selectedBookIdProvider.notifier).state = selectedBook.id;
         }
       });
       return const _EmptyMemoState();

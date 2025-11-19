@@ -39,9 +39,10 @@ Deno.serve(async (req) => {
       console.error('프로필 이미지 삭제 실패:', (e as Error).message);
     }
 
-    // 테이블 데이터 삭제
+    // 테이블 데이터 삭제 (순서 중요: 외래키 제약조건 때문에)
     await supabase.from('memos').delete().eq('user_id', user_id);
     await supabase.from('user_books').delete().eq('user_id', user_id);
+    await supabase.from('statistics').delete().eq('user_id', user_id);
     await supabase.from('users').delete().eq('id', user_id);
 
     // auth.users에서 사용자 삭제

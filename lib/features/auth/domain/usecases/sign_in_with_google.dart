@@ -1,8 +1,8 @@
 import 'package:dartz/dartz.dart';
-import 'package:whatif_milkyway_app/core/errors/failures.dart';
-import 'package:whatif_milkyway_app/core/usecases/usecase.dart';
-import 'package:whatif_milkyway_app/features/auth/domain/entities/user.dart';
-import 'package:whatif_milkyway_app/features/auth/domain/repositories/auth_repository.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/usecases/usecase.dart';
+import '../entities/user.dart';
+import '../repositories/auth_repository.dart';
 
 class SignInWithGoogle implements UseCase<User?, NoParams> {
   final AuthRepository repository;

@@ -51,13 +51,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final userBooksAsync = ref.read(userBooksProvider);
     userBooksAsync.whenData((books) {
-      if (books.isNotEmpty && ref.read(selectedBookIdProvider) == null) {
-        // 빌드 완료 후 provider 수정
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ref.read(selectedBookIdProvider.notifier).state = books[0].id;
-          }
-        });
+      final selectedBookId = ref.read(selectedBookIdProvider);
+      
+      if (books.isEmpty) {
+        // 책이 없으면 선택 해제
+        if (selectedBookId != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ref.read(selectedBookIdProvider.notifier).state = null;
+            }
+          });
+        }
+      } else {
+        // 선택된 책이 없거나 삭제된 책이 선택되어 있으면 첫 번째 책 선택
+        final isSelectedBookValid = selectedBookId != null &&
+            books.any((book) => book.id == selectedBookId);
+        
+        if (!isSelectedBookValid) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ref.read(selectedBookIdProvider.notifier).state = books[0].id;
+            }
+          });
+        }
       }
       // 뒤로가기 후 동기화 제거: GoRouter가 페이지를 캐싱하므로 상태가 유지됨
       // 실제 데이터 변경 시에만 동기화 필요 (예: 책 목록 변경)

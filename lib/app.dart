@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:whatif_milkyway_app/core/router/app_router.dart';
-import 'package:whatif_milkyway_app/core/theme/app_theme.dart';
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

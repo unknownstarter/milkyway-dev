@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'router_extensions.dart';
-import 'package:whatif_milkyway_app/features/auth/presentation/screens/login_screen.dart';
-import 'package:whatif_milkyway_app/features/home/presentation/screens/home_screen.dart';
-import 'package:whatif_milkyway_app/features/splash/presentation/screens/splash_screen.dart';
-import 'package:whatif_milkyway_app/features/onboarding/presentation/screens/nickname_screen.dart';
-import 'package:whatif_milkyway_app/features/onboarding/presentation/screens/profile_image_screen.dart';
-import 'package:whatif_milkyway_app/features/onboarding/presentation/screens/book_intro_screen.dart';
-import 'package:whatif_milkyway_app/features/books/presentation/screens/book_search_screen.dart';
-import 'package:whatif_milkyway_app/features/books/presentation/screens/book_shelf_screen.dart';
-import 'package:whatif_milkyway_app/features/memos/presentation/screens/memo_list_screen.dart';
-import 'package:whatif_milkyway_app/features/profile/presentation/screens/profile_screen.dart';
-import 'package:whatif_milkyway_app/features/profile/presentation/screens/profile_edit_screen.dart';
-import 'package:whatif_milkyway_app/features/books/presentation/screens/book_detail_screen.dart';
-import 'package:whatif_milkyway_app/features/memos/presentation/screens/memo_detail_screen.dart';
-import 'package:whatif_milkyway_app/features/memos/presentation/screens/memo_create_screen.dart';
-import 'package:whatif_milkyway_app/features/memos/presentation/screens/memo_edit_screen.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/onboarding/presentation/screens/nickname_screen.dart';
+import '../../features/onboarding/presentation/screens/profile_image_screen.dart';
+import '../../features/onboarding/presentation/screens/book_intro_screen.dart';
+import '../../features/books/presentation/screens/book_search_screen.dart';
+import '../../features/books/presentation/screens/book_shelf_screen.dart';
+import '../../features/memos/presentation/screens/memo_list_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/profile_edit_screen.dart';
+import '../../features/books/presentation/screens/book_detail_screen.dart';
+import '../../features/memos/presentation/screens/memo_detail_screen.dart';
+import '../../features/memos/presentation/screens/memo_create_screen.dart';
+import '../../features/memos/presentation/screens/memo_edit_screen.dart';
 import 'main_shell.dart';
 import 'app_routes.dart';
 
@@ -46,17 +46,88 @@ final router = GoRouter(
     GoRoute(
       path: AppRoutes.onboardingNickname,
       name: AppRoutes.onboardingNicknameName,
-      builder: (context, state) => const NicknameScreen(),
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const NicknameScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // secondaryAnimation이 활성화되면 뒤로가기 (왼쪽에서 오른쪽으로)
+          // 그렇지 않으면 앞으로가기 (오른쪽에서 왼쪽으로)
+          final isReverse = secondaryAnimation.status == AnimationStatus.forward ||
+              secondaryAnimation.value > 0;
+          
+          // 첫 번째 화면은 뒤로가기 시에만 애니메이션 적용
+          if (isReverse) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(-1.0, 0.0),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeInOut,
+                ),
+              ),
+              child: child,
+            );
+          }
+          return child;
+        },
+      ),
     ),
     GoRoute(
       path: AppRoutes.onboardingProfileImage,
       name: AppRoutes.onboardingProfileImageName,
-      builder: (context, state) => const ProfileImageScreen(),
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const ProfileImageScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // secondaryAnimation이 활성화되면 뒤로가기 (왼쪽에서 오른쪽으로)
+          // 그렇지 않으면 앞으로가기 (오른쪽에서 왼쪽으로)
+          final isReverse = secondaryAnimation.status == AnimationStatus.forward ||
+              secondaryAnimation.value > 0;
+          
+          final begin = isReverse ? const Offset(-1.0, 0.0) : const Offset(1.0, 0.0);
+          const end = Offset.zero;
+          
+          return SlideTransition(
+            position: Tween<Offset>(begin: begin, end: end).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ),
+            ),
+            child: child,
+          );
+        },
+      ),
     ),
     GoRoute(
       path: AppRoutes.onboardingBookIntro,
       name: AppRoutes.onboardingBookIntroName,
-      builder: (context, state) => const BookIntroScreen(),
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const BookIntroScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // 뒤로가기 감지: secondaryAnimation이 활성화되면 뒤로가기
+          final isReverse = secondaryAnimation.status == AnimationStatus.forward ||
+              secondaryAnimation.value > 0;
+          
+          // 뒤로가기 시: 현재 화면이 오른쪽으로 나감 (0 → 1.0)
+          // 앞으로가기 시: 현재 화면이 오른쪽에서 왼쪽으로 들어옴 (1.0 → 0)
+          final begin = isReverse ? Offset.zero : const Offset(1.0, 0.0);
+          final end = isReverse ? const Offset(1.0, 0.0) : Offset.zero;
+          
+          return SlideTransition(
+            position: Tween<Offset>(begin: begin, end: end).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ),
+            ),
+            child: child,
+          );
+        },
+      ),
     ),
     
     // 책 검색 화면 (별도 라우트)

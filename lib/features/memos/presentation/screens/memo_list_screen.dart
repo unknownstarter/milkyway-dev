@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/memo_list.dart';
-import '../../../../core/presentation/widgets/empty_book_card.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
 import '../../../../core/presentation/widgets/add_floating_action_button.dart';
 
@@ -41,15 +40,9 @@ class MemoListScreen extends ConsumerWidget {
           ),
         ),
         data: (books) {
-          if (books.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 200),
-                child: EmptyBookCard(),
-              ),
-            );
-          }
-          return const MemoList();
+          // 책이 없어도 MemoList를 표시하여 필터 버튼과 빈 상태 메시지 표시
+          // bookId를 null로 명시적으로 전달하여 모든 메모를 가져옴
+          return const MemoList(bookId: null);
         },
       ),
       floatingActionButton: const AddFloatingActionButton(),

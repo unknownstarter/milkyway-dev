@@ -8,6 +8,10 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../home/domain/models/book.dart';
 import '../../../home/domain/models/book_status.dart';
+import '../../../home/presentation/providers/book_provider.dart';
+import '../../../books/presentation/providers/user_books_provider.dart';
+import '../../../memos/presentation/providers/memo_provider.dart';
+import '../../../home/presentation/providers/selected_book_provider.dart';
 import '../../../memos/presentation/widgets/memo_list_view.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
@@ -72,6 +76,24 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          bookAsync.when(
+            data: (book) => TextButton(
+              onPressed: () => _deleteBook(book),
+              child: const Text(
+                '삭제',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontFamily: 'Pretendard',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: bookAsync.when(
         data: (book) {
@@ -94,10 +116,13 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
   }
 
   Widget _buildContent(Book book) {
+    // 하단 버튼 높이 계산: 버튼(41px) + 상하 패딩(20px * 2) + SafeArea
+    final bottomPadding = 41 + 20 * 2 + MediaQuery.of(context).padding.bottom + 20; // 추가 여유 공간 20px
+    
     return Stack(
       children: [
         SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.only(bottom: bottomPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -554,5 +579,86 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       AppRoutes.memoCreateName,
       queryParameters: {'bookId': book.id},
     );
+  }
+
+  Future<void> _deleteBook(Book? book) async {
+    if (book == null) return;
+
+    // 삭제 확인 다이얼로그
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          '책 삭제',
+          style: TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+        ),
+        content: const Text(
+          '책을 삭제하면 해당 책의 메모도 모두 삭제되며 복구할 수 없습니다.\n\n정말 삭제하시겠습니까?',
+          style: TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              '취소',
+              style: TextStyle(color: Colors.grey, fontFamily: 'Pretendard'),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              '삭제',
+              style: TextStyle(color: Colors.red, fontFamily: 'Pretendard'),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    try {
+      final repository = ref.read(bookRepositoryProvider);
+      await repository.deleteUserBook(book.id);
+
+      // 관련 provider들 invalidate
+      ref.invalidate(bookDetailProvider(book.id));
+      ref.invalidate(userBooksProvider);
+      ref.invalidate(recentBooksProvider);
+      ref.invalidate(bookMemosProvider(book.id));
+      ref.invalidate(recentMemosProvider);
+      ref.invalidate(homeRecentMemosProvider);
+      ref.invalidate(allMemosProvider);
+
+      // 삭제된 책이 선택되어 있으면 선택 해제 또는 첫 번째 책으로 변경
+      final selectedBookId = ref.read(selectedBookIdProvider);
+      if (selectedBookId == book.id) {
+        // 남은 책 목록 가져오기
+        final booksAsync = ref.read(userBooksProvider);
+        booksAsync.whenData((books) {
+          if (books.isNotEmpty) {
+            // 남은 책이 있으면 첫 번째 책 선택
+            ref.read(selectedBookIdProvider.notifier).state = books[0].id;
+          } else {
+            // 남은 책이 없으면 선택 해제
+            ref.read(selectedBookIdProvider.notifier).state = null;
+          }
+        });
+      }
+
+      if (mounted) {
+        // 이전 화면으로 이동
+        if (widget.isFromOnboarding || widget.isFromRegistration) {
+          context.goNamed(AppRoutes.homeName);
+        } else {
+          context.pop();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showError(context, e, operation: '책 삭제');
+      }
+    }
   }
 }

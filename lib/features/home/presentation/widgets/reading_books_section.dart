@@ -276,21 +276,25 @@ class _SingleBookView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 책이 하나일 때도 여러 책일 때와 동일한 확대 효과 적용 (scale 1.3)
     return Center(
-      child: GestureDetector(
-        onTap: () {
-          // 선택된 책 ID 업데이트
-          ref.read(selectedBookIdProvider.notifier).state = book.id;
-          context.pushNamed(
-            AppRoutes.bookDetailName,
-            pathParameters: {'id': book.id},
-          );
-        },
-        child: _BookCover(
-          book: book,
-          width: 104,
-          height: 147,
-          opacity: 1.0,
+      child: Transform.scale(
+        scale: 1.3,
+        child: GestureDetector(
+          onTap: () {
+            // 선택된 책 ID 업데이트
+            ref.read(selectedBookIdProvider.notifier).state = book.id;
+            context.pushNamed(
+              AppRoutes.bookDetailName,
+              pathParameters: {'id': book.id},
+            );
+          },
+          child: _BookCover(
+            book: book,
+            width: 104,
+            height: 147,
+            opacity: 1.0,
+          ),
         ),
       ),
     );

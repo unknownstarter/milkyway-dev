@@ -186,10 +186,20 @@ class _MemoListState extends ConsumerState<MemoList> {
                       separatorBuilder: (_, __) => const SizedBox(height: 40),
                       itemBuilder: (context, index) {
                         if (index == filteredMemos.length) {
-                          return ref
-                                  .read(paginatedMemosProvider(widget.bookId)
-                                      .notifier)
-                                  .hasMore
+                          // 필터링된 메모가 실제 로드된 메모보다 적으면
+                          // 필터링으로 인해 일부 메모가 제외된 것이므로 더 이상 로드할 메모가 없을 수 있음
+                          // 하지만 필터링된 메모가 실제 로드된 메모와 같을 때는 더 로드할 수 있음
+                          final notifier = ref
+                              .read(paginatedMemosProvider(widget.bookId)
+                                  .notifier);
+                          final hasMore = notifier.hasMore;
+                          
+                          // 필터링된 메모가 실제 로드된 메모보다 적으면 로딩 스피너를 표시하지 않음
+                          // (필터링으로 인해 일부 메모가 제외되었을 가능성이 높음)
+                          final shouldShowLoading = hasMore &&
+                              filteredMemos.length == memos.length;
+                          
+                          return shouldShowLoading
                               ? const Center(
                                   child: Padding(
                                     padding: EdgeInsets.all(16.0),

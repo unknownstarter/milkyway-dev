@@ -32,7 +32,18 @@ class Memo {
   });
 
   factory Memo.fromJson(Map<String, dynamic> json) {
-    final users = json['users'] as Map<String, dynamic>?;
+    // Supabase 조인 결과 처리: users는 객체 또는 배열일 수 있음
+    Map<String, dynamic>? users;
+    final usersData = json['users'];
+    if (usersData != null) {
+      if (usersData is List && usersData.isNotEmpty) {
+        // 배열인 경우 첫 번째 요소 사용
+        users = usersData[0] as Map<String, dynamic>?;
+      } else if (usersData is Map<String, dynamic>) {
+        // 객체인 경우 그대로 사용
+        users = usersData;
+      }
+    }
 
     return Memo(
       id: json['id'],

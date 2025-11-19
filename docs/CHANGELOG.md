@@ -3,8 +3,94 @@
 ## 📋 버전 관리
 
 **현재 버전:** 1.0.0-dev  
-**최종 업데이트:** 2025-11-18  
+**최종 업데이트:** 2025-11-19  
 **개발 상태:** 개발 중
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-19
+
+### 🐛 메모 및 UI 버그 수정 (2025-11-19)
+
+#### 📝 My Memo 화면 데이터 로딩 수정
+- **모든 메모 불러오기** - My Memo 화면에서 모든 책의 메모를 불러오도록 수정
+  - `MemoList(bookId: null)` 명시적으로 전달하여 모든 메모 조회
+  - 필터(모든/공개/비공개)가 정상 작동하도록 개선
+
+#### 🖼️ 메모 프로필 정보 동기화 개선
+- **최신 프로필 정보 반영** - 메모에 표시되는 프로필 이미지와 닉네임이 최신 정보로 갱신되도록 수정
+  - `Memo.fromJson`에서 Supabase 조인 결과(배열/객체) 모두 처리
+  - `updateProfile`에서 메모 관련 provider 무효화 추가
+  - 프로필 변경 시 메모 목록이 자동으로 최신 정보로 갱신
+
+#### 📚 홈 화면 책 확대 효과 수정
+- **단일 책 확대 효과** - 책이 하나만 있을 때도 확대 효과가 적용되도록 수정
+  - `_SingleBookView`에 `Transform.scale(scale: 1.3)` 적용
+  - 여러 책일 때와 동일한 시각적 효과 제공
+
+#### 📝 수정된 파일
+- `lib/features/memos/presentation/screens/memo_list_screen.dart` - bookId null 명시적 전달
+- `lib/features/memos/domain/models/memo.dart` - Supabase 조인 결과 처리 개선
+- `lib/features/auth/presentation/providers/auth_provider.dart` - 프로필 업데이트 시 메모 provider 무효화
+- `lib/features/home/presentation/widgets/reading_books_section.dart` - 단일 책 확대 효과 추가
+
+---
+
+### ✨ Referral Code 시스템 추가 (2025-11-19)
+
+#### 📱 Supabase users 테이블에 referral_code 자동 생성 기능 구현
+- **referral_code 컬럼 추가** - users 테이블에 UNIQUE 제약조건이 있는 referral_code 컬럼 추가
+- **자동 생성 함수** - `generate_referral_code()` 함수로 영문 대소문자+숫자로 구성된 고유 6자리 코드 생성
+- **자동 생성 Trigger** - 새 사용자 INSERT 시 referral_code가 NULL이면 자동 생성
+- **기존 사용자 업데이트** - 기존 사용자 64명 모두에게 referral_code 자동 부여 완료
+- **프로필 의견 남기기 개선** - 의견 남기기 시 referral_code 자동 수집하여 이메일 본문에 포함
+
+#### 📝 수정된 파일
+- `supabase/migrations/add_referral_code.sql` - 신규 생성 (referral_code 컬럼, 함수, trigger, 기존 사용자 업데이트)
+- `lib/features/profile/presentation/widgets/feedback_modal.dart` - referral_code 조회 및 이메일 본문에 추가
+- `DATABASE_SCHEMA.md` - referral_code 컬럼 정보 추가
+
+---
+
+### 🐛 버그 수정 및 UI 개선 (2025-11-19)
+
+#### 📱 Home 화면 AppBar 표시 문제 수정
+- **빈 상태에서도 AppBar 표시** - 책이 없는 상태에서도 AppBar(로고)가 표시되도록 수정
+  - `HomeEmptyState`, `HomeLoadingState`, `HomeErrorState`에 `SliverAppBar` 추가
+  - `CustomScrollView` 구조로 통일하여 일관된 UI 제공
+
+#### 🔐 프로필 데이터 유지 문제 수정
+- **로그인 시 데이터 덮어쓰기 방지** - 로그아웃 후 다시 로그인해도 온보딩/프로필 편집에서 설정한 닉네임과 프로필 이미지가 유지되도록 수정
+  - `_handleUserSignIn`에서 기존 사용자의 nickname과 picture_url을 덮어쓰지 않도록 변경
+  - DB에 값이 있으면 Google/Apple에서 받은 값으로 덮어쓰지 않음
+
+#### 📚 책 삭제 후 메모 섹션 문제 수정
+- **삭제된 책의 메모 표시 방지** - 책 삭제 후 홈 화면에서 삭제된 책의 메모를 보여주는 문제 수정
+  - 삭제된 책이 선택되어 있으면 자동으로 첫 번째 책으로 변경
+  - `HomeMemoSection`과 `HomeScreen`에서 삭제된 책 유효성 검사 추가
+
+#### 🐛 프로필 수정 화면 에러 수정
+- **initState에서 ref 사용 에러 해결** - `initState`에서 `ref` 사용으로 인한 에러 수정
+  - `initState`에서 `ref` 사용 제거, `didChangeDependencies`로 이동
+  - Analytics 로깅을 `addPostFrameCallback`으로 빌드 후 실행
+
+#### 📖 책 상세 화면 메모 섹션 가림 문제 수정
+- **하단 버튼에 가려지는 문제 해결** - 하단 "메모하기" 버튼에 메모 섹션이 가려지는 문제 수정
+  - `SingleChildScrollView`의 하단 패딩을 동적으로 계산하여 충분한 공간 확보
+  - 버튼 높이 + 패딩 + SafeArea를 고려한 동적 패딩 적용
+
+#### 📝 My Memo 화면 UI 개선
+- **책이 없는 상태에서도 필터 표시** - 책이 없는 상태에서도 필터 버튼과 빈 상태 메시지가 표시되도록 수정
+  - `EmptyBookCard` 대신 `MemoList` 위젯을 항상 표시하여 일관된 UI 제공
+
+#### 📝 수정된 파일
+- `lib/features/home/presentation/widgets/home_empty_states.dart` - SliverAppBar 추가
+- `lib/features/auth/presentation/providers/auth_provider.dart` - 로그인 시 데이터 덮어쓰기 방지
+- `lib/features/books/presentation/screens/book_detail_screen.dart` - 삭제된 책 선택 해제 로직 추가, 메모 섹션 하단 패딩 추가
+- `lib/features/home/presentation/widgets/home_memo_section.dart` - 삭제된 책 유효성 검사 추가
+- `lib/features/home/presentation/screens/home_screen.dart` - 삭제된 책 유효성 검사 추가
+- `lib/features/profile/presentation/screens/profile_edit_screen.dart` - initState 에러 수정
+- `lib/features/memos/presentation/screens/memo_list_screen.dart` - 책이 없어도 MemoList 표시
 
 ---
 

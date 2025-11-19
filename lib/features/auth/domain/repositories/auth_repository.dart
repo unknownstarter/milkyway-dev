@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import 'package:whatif_milkyway_app/core/errors/failures.dart';
-import 'package:whatif_milkyway_app/features/auth/domain/entities/user.dart';
+import '../../../../core/errors/failures.dart';
+import '../entities/user.dart';
 
 abstract class AuthRepository {
   Future<Either<Failure, User?>> getCurrentUser();

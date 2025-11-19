@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:whatif_milkyway_app/features/auth/domain/entities/user.dart';
+import '../../domain/entities/user.dart';
 
 part 'user_model.freezed.dart';
 part 'user_model.g.dart';

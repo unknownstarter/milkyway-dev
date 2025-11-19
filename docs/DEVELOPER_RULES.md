@@ -2,9 +2,9 @@
 
 ## 📋 개발 가이드라인
 
-**최종 업데이트:** 2025-11-18  
+**최종 업데이트:** 2025-11-19  
 **적용 대상:** 모든 개발자  
-**버전:** 1.4.0
+**버전:** 1.5.0
 
 ## 🎯 핵심 원칙
 
@@ -519,6 +519,77 @@ Future<void> _deleteItem(...) async {
 - [ ] 사용자가 즉시 변경사항을 확인할 수 있는가?
 - [ ] 불필요한 복잡한 로직이 없는가?
 
+## 🗄️ Supabase 데이터 처리 규칙
+
+### 1. 조인 결과 처리
+Supabase의 조인 쿼리 결과는 **배열 또는 객체**로 반환될 수 있으므로, 두 경우를 모두 처리해야 합니다.
+
+```dart
+// ✅ 좋은 예: 배열과 객체 모두 처리
+factory Memo.fromJson(Map<String, dynamic> json) {
+  Map<String, dynamic>? users;
+  final usersData = json['users'];
+  if (usersData != null) {
+    if (usersData is List && usersData.isNotEmpty) {
+      // 배열인 경우 첫 번째 요소 사용
+      users = usersData[0] as Map<String, dynamic>?;
+    } else if (usersData is Map<String, dynamic>) {
+      // 객체인 경우 그대로 사용
+      users = usersData;
+    }
+  }
+
+  return Memo(
+    // ...
+    userNickname: users?['nickname'],
+    userAvatarUrl: users?['picture_url'],
+  );
+}
+
+// ❌ 나쁜 예: 객체만 가정
+factory Memo.fromJson(Map<String, dynamic> json) {
+  final users = json['users'] as Map<String, dynamic>?; // 배열일 때 에러 발생
+  // ...
+}
+```
+
+### 2. 프로필 업데이트 시 관련 Provider 무효화
+프로필 정보(닉네임, 프로필 이미지)가 변경되면, 해당 정보를 표시하는 모든 화면의 provider를 무효화해야 합니다.
+
+```dart
+// ✅ 좋은 예: 프로필 업데이트 시 관련 provider 무효화
+Future<void> updateProfile({
+  String? nickname,
+  String? pictureUrl,
+}) async {
+  // ... DB 업데이트 로직 ...
+  
+  // 프로필 업데이트 시 메모 관련 provider들 무효화하여 최신 프로필 정보 반영
+  ref.invalidate(recentMemosProvider);
+  ref.invalidate(homeRecentMemosProvider);
+  ref.invalidate(allMemosProvider);
+  ref.invalidate(paginatedMemosProvider(null)); // 모든 메모 리스트
+  // 다른 bookId들은 사용자가 접근할 때 자동으로 새로 로드됨
+}
+
+// ❌ 나쁜 예: provider 무효화 누락
+Future<void> updateProfile({...}) async {
+  // ... DB 업데이트만 하고 provider 무효화 안 함
+  // 결과: 메모에 표시되는 프로필 정보가 업데이트되지 않음
+}
+```
+
+### 3. 명시적 파라미터 전달
+null 값을 전달할 때도 명시적으로 전달하여 코드의 의도를 명확히 합니다.
+
+```dart
+// ✅ 좋은 예: 명시적으로 null 전달
+return const MemoList(bookId: null); // 모든 메모를 불러옴
+
+// ❌ 나쁜 예: 기본값에 의존
+return const MemoList(); // bookId가 null인지 명확하지 않음
+```
+
 ## 🧪 테스트 규칙
 
 ### 1. 단위 테스트
@@ -940,7 +1011,7 @@ context.push('/books/detail/$bookId?$queryParams');
 ---
 
 **문서 작성일:** 2025-11-11  
-**최종 업데이트:** 2025-11-18  
+**최종 업데이트:** 2025-11-19  
 **작성자:** AI Assistant  
 **검토자:** 개발팀  
-**다음 검토 예정일:** 2025-12-18
+**다음 검토 예정일:** 2025-12-19
