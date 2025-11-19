@@ -75,6 +75,9 @@ class Auth extends _$Auth {
 
   Future<User?> getCurrentUser() async {
     try {
+      // 세션 갱신 시도 (만료되기 전에 자동 갱신)
+      await _refreshSessionIfNeeded();
+      
       final session = _supabase.auth.currentSession;
       if (session?.user == null) return null;
 
@@ -90,6 +93,36 @@ class Auth extends _$Auth {
     } catch (e) {
       log('Error getting current user: $e');
       return null;
+    }
+  }
+
+  /// 세션이 만료되기 전에 자동으로 갱신
+  /// Refresh token을 사용하여 최대 1개월까지 세션 유지 가능
+  Future<void> _refreshSessionIfNeeded() async {
+    try {
+      final session = _supabase.auth.currentSession;
+      if (session == null) return;
+
+      // 세션이 만료되기 5분 전에 갱신
+      final expiresAt = session.expiresAt;
+      if (expiresAt != null) {
+        final now = DateTime.now().toUtc();
+        final expiresAtDateTime = DateTime.fromMillisecondsSinceEpoch(
+          expiresAt * 1000,
+          isUtc: true,
+        );
+        final timeUntilExpiry = expiresAtDateTime.difference(now);
+
+        // 만료되기 5분 전이면 갱신 시도
+        if (timeUntilExpiry.inMinutes < 5) {
+          log('세션 갱신 시도 (만료까지 ${timeUntilExpiry.inMinutes}분 남음)');
+          await _supabase.auth.refreshSession();
+          log('세션 갱신 완료');
+        }
+      }
+    } catch (e) {
+      log('세션 갱신 실패: $e');
+      // 세션 갱신 실패는 무시 (다음 요청 시 다시 시도)
     }
   }
 
@@ -140,7 +173,10 @@ class Auth extends _$Auth {
       };
 
       if (nickname != null) updates['nickname'] = nickname;
-      if (pictureUrl != null) updates['picture_url'] = pictureUrl;
+      if (pictureUrl != null) {
+        // 빈 문자열은 null로 처리 (이미지 제거)
+        updates['picture_url'] = pictureUrl.isEmpty ? null : pictureUrl;
+      }
 
       await _supabase.from('users').update(updates).eq('id', currentUser.id);
 

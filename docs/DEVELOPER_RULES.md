@@ -2,9 +2,9 @@
 
 ## 📋 개발 가이드라인
 
-**최종 업데이트:** 2025-11-11  
+**최종 업데이트:** 2025-11-18  
 **적용 대상:** 모든 개발자  
-**버전:** 1.3.0
+**버전:** 1.4.0
 
 ## 🎯 핵심 원칙
 
@@ -308,6 +308,216 @@ final selectedBook = ref.watch(bookListProvider.select(
   (books) => books.value?.firstWhere((book) => book.id == selectedId),
 ));
 ```
+
+### 3. 수정/삭제 후 상세 화면 동작 규칙 (2025-11-18 추가)
+
+#### 🎯 핵심 원칙
+**상세 화면은 항상 최신 데이터를 반영해야 하며, 수정/삭제 후 즉시 UI가 업데이트되어야 합니다.**
+
+#### ✅ 수정(Update) 후 동작 패턴
+
+**1. Provider에서 수정 후 관련 Provider 무효화**
+```dart
+// ✅ 좋은 예: updateMemoProvider에서 memoProvider 무효화
+final updateMemoProvider = FutureProvider.family<void, UpdateMemoParams>(
+  (ref, params) async {
+    await repository.updateMemo(params);
+    
+    // 상세 화면 갱신을 위해 해당 item의 provider 무효화
+    ref.invalidate(memoProvider(params.memoId));
+    
+    // 리스트 화면 갱신을 위해 리스트 provider들 무효화
+    ref.invalidate(bookMemosProvider(params.bookId));
+    ref.invalidate(recentMemosProvider);
+    // ... 기타 관련 provider들
+  },
+);
+```
+
+**2. Form Provider에서도 동일하게 처리**
+```dart
+// ✅ 좋은 예: memoFormProvider의 updateMemo에서도 무효화
+Future<bool> updateMemo({required String memoId, ...}) async {
+  await _repository.updateMemo(...);
+  
+  // 상세 화면 갱신
+  ref.invalidate(memoProvider(memoId));
+  
+  // 리스트 화면 갱신
+  ref.invalidate(bookMemosProvider(bookId));
+  // ... 기타 관련 provider들
+  
+  return true;
+}
+```
+
+**3. 상세 화면은 ConsumerStatefulWidget으로 구현**
+```dart
+// ✅ 좋은 예: 화면 복귀 시 자동 갱신
+class ItemDetailScreen extends ConsumerStatefulWidget {
+  final String itemId;
+  // ...
+}
+
+class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
+  bool _hasInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 화면이 처음 나타날 때만 초기화
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      return;
+    }
+    // 화면이 다시 나타날 때 (예: 수정 화면에서 돌아올 때) provider 갱신
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(itemProvider(widget.itemId));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemAsync = ref.watch(itemProvider(widget.itemId));
+    // ...
+  }
+}
+```
+
+#### ✅ 삭제(Delete) 후 동작 패턴
+
+**1. Provider에서 삭제 후 관련 Provider 무효화**
+```dart
+// ✅ 좋은 예: deleteMemoProvider에서 memoProvider 무효화
+final deleteMemoProvider = FutureProvider.family<void, DeleteMemoParams>(
+  (ref, params) async {
+    await repository.deleteMemo(params.memoId);
+    
+    // 상세 화면 갱신 (null 반환하여 화면 닫기)
+    ref.invalidate(memoProvider(params.memoId));
+    
+    // 리스트 화면 갱신
+    ref.invalidate(bookMemosProvider(params.bookId));
+    ref.invalidate(recentMemosProvider);
+    // ... 기타 관련 provider들
+  },
+);
+```
+
+**2. 상세 화면에서 null 처리**
+```dart
+// ✅ 좋은 예: provider가 null을 반환하면 자동으로 화면 닫기
+final itemAsync = ref.watch(itemProvider(itemId));
+
+return itemAsync.when(
+  data: (item) {
+    // item이 null이면 삭제된 것으로 간주하고 화면 닫기
+    if (item == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.goNamed(AppRoutes.homeName);
+          }
+        }
+      });
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return _buildContent(context, item);
+  },
+  // ...
+);
+```
+
+**3. 삭제 로직 단순화**
+```dart
+// ✅ 좋은 예: 삭제 요청 후 provider 무효화로 자동 처리
+Future<void> _deleteItem(BuildContext context, Item item) async {
+  final shouldDelete = await showDialog<bool>(...);
+  
+  if (shouldDelete == true) {
+    try {
+      // 서버에 삭제 요청
+      await ref.read(deleteItemProvider(
+        (itemId: item.id, ...),
+      ).future);
+      
+      // provider가 무효화되면 item이 null이 되어 자동으로 화면이 닫힘
+      // 추가로 확실하게 화면 닫기
+      if (context.mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.goNamed(AppRoutes.homeName);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('삭제 실패: $e')),
+        );
+      }
+    }
+  }
+}
+```
+
+#### ❌ 나쁜 예시 (피해야 할 패턴)
+
+```dart
+// ❌ 나쁜 예: 수정 후 상세 화면 provider를 무효화하지 않음
+final updateMemoProvider = FutureProvider.family<void, UpdateMemoParams>(
+  (ref, params) async {
+    await repository.updateMemo(params);
+    // memoProvider 무효화 누락!
+    ref.invalidate(bookMemosProvider(params.bookId));
+  },
+);
+
+// ❌ 나쁜 예: 삭제 후 화면을 수동으로 닫기만 함 (provider 갱신 없음)
+Future<void> _deleteItem(BuildContext context, Item item) async {
+  await repository.deleteItem(item.id);
+  context.pop(); // provider 갱신 없이 화면만 닫음
+}
+
+// ❌ 나쁜 예: ConsumerWidget 사용 (화면 복귀 시 자동 갱신 불가)
+class ItemDetailScreen extends ConsumerWidget {
+  // didChangeDependencies 사용 불가
+}
+
+// ❌ 나쁜 예: 복잡한 삭제 로직 (불필요한 상태 관리)
+Future<void> _deleteItem(...) async {
+  // 복잡한 상태 체크
+  // 여러 단계의 확인
+  // 불필요한 딜레이
+}
+```
+
+#### 📋 체크리스트
+
+새로운 상세 화면을 만들 때 다음을 확인하세요:
+
+**수정 기능:**
+- [ ] 수정 provider에서 해당 item의 상세 provider를 무효화하는가?
+- [ ] Form provider에서도 상세 provider를 무효화하는가?
+- [ ] 상세 화면이 `ConsumerStatefulWidget`으로 구현되었는가?
+- [ ] `didChangeDependencies`에서 화면 복귀 시 provider를 갱신하는가?
+
+**삭제 기능:**
+- [ ] 삭제 provider에서 해당 item의 상세 provider를 무효화하는가?
+- [ ] 상세 화면에서 `item == null`일 때 자동으로 화면을 닫는가?
+- [ ] 삭제 로직이 단순하고 명확한가?
+- [ ] 삭제 실패 시 에러 처리가 되어 있는가?
+
+**일반:**
+- [ ] 모든 관련 리스트 provider들이 무효화되는가?
+- [ ] 사용자가 즉시 변경사항을 확인할 수 있는가?
+- [ ] 불필요한 복잡한 로직이 없는가?
 
 ## 🧪 테스트 규칙
 
@@ -730,6 +940,7 @@ context.push('/books/detail/$bookId?$queryParams');
 ---
 
 **문서 작성일:** 2025-11-11  
+**최종 업데이트:** 2025-11-18  
 **작성자:** AI Assistant  
 **검토자:** 개발팀  
-**다음 검토 예정일:** 2025-12-11
+**다음 검토 예정일:** 2025-12-18

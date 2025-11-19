@@ -5,6 +5,7 @@ import '../providers/book_detail_provider.dart';
 import '../../../../core/providers/analytics_provider.dart';
 import '../../../../core/presentation/widgets/pill_filter_button.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/utils/error_handler.dart';
 import '../../../home/domain/models/book.dart';
 import '../../../home/domain/models/book_status.dart';
 import '../../../memos/presentation/widgets/memo_list_view.dart';
@@ -543,12 +544,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('상태 변경 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
-          ),
-        );
+        ErrorHandler.showError(context, e, operation: '책 상태 변경');
       }
     }
   }

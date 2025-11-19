@@ -23,7 +23,7 @@ class MemoCard extends StatelessWidget {
       },
       child: Card(
         elevation: 0,
-        color: Colors.black,
+        color: const Color(0xFF181818),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: Colors.grey.shade800),

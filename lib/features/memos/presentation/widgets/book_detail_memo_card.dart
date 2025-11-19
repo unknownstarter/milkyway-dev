@@ -31,7 +31,7 @@ class BookDetailMemoCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 40),
         padding: EdgeInsets.zero,
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: const Color(0xFF181818),
           borderRadius: BorderRadius.circular(12),
         ),
         child: hasImage

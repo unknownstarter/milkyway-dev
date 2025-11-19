@@ -8,8 +8,9 @@ import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../widgets/full_screen_image_viewer.dart';
+import '../../../../core/utils/error_handler.dart';
 
-class MemoDetailScreen extends ConsumerWidget {
+class MemoDetailScreen extends ConsumerStatefulWidget {
   final String memoId;
 
   const MemoDetailScreen({
@@ -18,11 +19,54 @@ class MemoDetailScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final memoAsync = ref.watch(memoProvider(memoId));
+  ConsumerState<MemoDetailScreen> createState() => _MemoDetailScreenState();
+}
+
+class _MemoDetailScreenState extends ConsumerState<MemoDetailScreen> {
+  bool _hasInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 화면이 처음 나타날 때만 초기화
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      return;
+    }
+    // 화면이 다시 나타날 때 (예: 수정 화면에서 돌아올 때) provider 갱신
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(memoProvider(widget.memoId));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final memoAsync = ref.watch(memoProvider(widget.memoId));
 
     return memoAsync.when(
-      data: (memo) => _buildContent(context, ref, memo),
+      data: (memo) {
+        // 메모가 삭제되었거나 존재하지 않는 경우 이전 화면으로 이동
+        if (memo == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.goNamed(AppRoutes.homeName);
+              }
+            }
+          });
+          return Scaffold(
+            backgroundColor: const Color(0xFF181818),
+            body: const Center(
+              child: CircularProgressIndicator(color: Color(0xFFECECEC)),
+            ),
+          );
+        }
+        return _buildContent(context, memo);
+      },
       loading: () => Scaffold(
         backgroundColor: const Color(0xFF181818),
         body: const Center(
@@ -41,7 +85,7 @@ class MemoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, Memo memo) {
+  Widget _buildContent(BuildContext context, Memo memo) {
     final currentUser = ref.watch(authProvider).value;
     final isOwner = currentUser?.id == memo.userId;
 
@@ -65,8 +109,7 @@ class MemoDetailScreen extends ConsumerWidget {
             ? [
                 IconButton(
                   icon: const Icon(Icons.more_horiz),
-                  onPressed: () =>
-                      _showMemoOptionsBottomSheet(context, ref, memo),
+                  onPressed: () => _showMemoOptionsBottomSheet(context, memo),
                 ),
               ]
             : null,
@@ -243,8 +286,7 @@ class MemoDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showMemoOptionsBottomSheet(
-      BuildContext context, WidgetRef ref, Memo memo) {
+  void _showMemoOptionsBottomSheet(BuildContext context, Memo memo) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -357,7 +399,7 @@ class MemoDetailScreen extends ConsumerWidget {
                           ),
                           onTap: () {
                             Navigator.pop(context);
-                            _deleteMemo(context, ref, memo);
+                            _deleteMemo(context, memo);
                           },
                         ),
                         const SizedBox(height: 16),
@@ -380,11 +422,10 @@ class MemoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteMemo(
-      BuildContext context, WidgetRef ref, Memo memo) async {
+  Future<void> _deleteMemo(BuildContext context, Memo memo) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.5), // 어두운 딤 처리
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         title: const Text(
@@ -410,21 +451,23 @@ class MemoDetailScreen extends ConsumerWidget {
 
     if (shouldDelete == true) {
       try {
+        // 서버에 삭제 요청
         await ref.read(deleteMemoProvider(
           (memoId: memo.id, bookId: memo.bookId),
         ).future);
-
+        
+        // provider가 무효화되면 memo가 null이 되어 자동으로 화면이 닫힘
+        // 추가로 확실하게 화면 닫기
         if (context.mounted) {
-          context.pop();
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.goNamed(AppRoutes.homeName);
+          }
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('메모 삭제 실패: $e'),
-              backgroundColor: const Color(0xFF242424),
-            ),
-          );
+          ErrorHandler.showError(context, e, operation: '메모 삭제');
         }
       }
     }

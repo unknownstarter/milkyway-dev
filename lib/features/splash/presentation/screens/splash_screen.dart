@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:developer';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -53,24 +54,51 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       // 앱 버전 체크 추가
       await ref.read(authProvider.notifier).checkAppVersion();
 
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null || session.isExpired) {
-        if (mounted) context.goNamed(AppRoutes.loginName);
+      // 세션 갱신 시도 (refresh token을 사용하여 최대 1개월까지 유지)
+      final supabase = Supabase.instance.client;
+      final session = supabase.auth.currentSession;
+      
+      if (session != null && !session.isExpired) {
+        // 세션이 유효하면 사용자 정보 가져오기
+        final user = await ref.read(authProvider.notifier).getCurrentUser();
+        if (user == null) {
+          if (mounted) context.goNamed(AppRoutes.loginName);
+          return;
+        }
+
+        if (!user.onboardingCompleted) {
+          if (mounted) context.goNamed(AppRoutes.onboardingNicknameName);
+          return;
+        }
+
+        if (mounted) context.goNamed(AppRoutes.homeName);
         return;
       }
 
-      final user = await ref.read(authProvider.notifier).getCurrentUser();
-      if (user == null) {
-        if (mounted) context.goNamed(AppRoutes.loginName);
-        return;
+      // 세션이 없거나 만료된 경우, refresh token으로 갱신 시도
+      if (session != null) {
+        try {
+          log('세션 만료됨, refresh token으로 갱신 시도...');
+          await supabase.auth.refreshSession();
+          log('세션 갱신 성공');
+          
+          // 갱신 후 다시 사용자 정보 확인
+          final user = await ref.read(authProvider.notifier).getCurrentUser();
+          if (user != null) {
+            if (!user.onboardingCompleted) {
+              if (mounted) context.goNamed(AppRoutes.onboardingNicknameName);
+              return;
+            }
+            if (mounted) context.goNamed(AppRoutes.homeName);
+            return;
+          }
+        } catch (e) {
+          log('세션 갱신 실패: $e');
+        }
       }
 
-      if (!user.onboardingCompleted) {
-        if (mounted) context.goNamed(AppRoutes.onboardingNicknameName);
-        return;
-      }
-
-      if (mounted) context.goNamed(AppRoutes.homeName);
+      // 세션 갱신 실패 또는 세션이 없는 경우 로그인 화면으로
+      if (mounted) context.goNamed(AppRoutes.loginName);
     } catch (e) {
       if (e.toString().contains('업데이트가 필요합니다')) {
         _showForceUpdateDialog();

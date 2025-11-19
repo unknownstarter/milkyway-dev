@@ -10,6 +10,113 @@
 
 ## 🚀 [1.0.0-dev] - 2025-11-18
 
+### 🔄 메모 상세 화면 상태 동기화 개선 (2025-11-18)
+
+#### 📱 수정/삭제 후 자동 갱신 구현
+- **메모 수정 후 자동 갱신** - 수정 화면에서 돌아올 때 메모 상세 화면이 자동으로 최신 데이터로 갱신
+  - `ConsumerStatefulWidget`으로 변경하여 `didChangeDependencies`에서 provider 갱신
+  - `updateMemoProvider`와 `memoFormProvider`에서 `memoProvider` 무효화 추가
+- **메모 삭제 후 자동 화면 닫기** - 삭제 시 provider가 null을 반환하여 자동으로 이전 화면으로 이동
+  - `deleteMemoProvider`에서 `memoProvider` 무효화 추가
+  - 삭제 로직 단순화: 서버 요청 후 즉시 화면 닫기
+- **Provider 무효화 체계** - 모든 수정/삭제 작업에서 관련 provider 자동 무효화
+  - 상세 화면 provider (`memoProvider`)
+  - 리스트 화면 provider들 (`bookMemosProvider`, `recentMemosProvider` 등)
+
+#### 📝 수정된 파일
+- `lib/features/memos/presentation/screens/memo_detail_screen.dart` - ConsumerStatefulWidget으로 변경, 자동 갱신 로직 추가
+- `lib/features/memos/presentation/providers/memo_provider.dart` - memoProvider 무효화 추가
+- `lib/features/memos/presentation/providers/memo_form_provider.dart` - memoProvider 무효화 추가
+
+---
+
+### 🎨 UI 색상 통일 (2025-11-18)
+
+#### 📱 메모 카드 배경색 통일
+- **모든 메모 카드 배경색 통일** - `#181818`로 일관성 유지
+  - Home 화면 내 메모 섹션
+  - 책 상세 화면 메모 리스트
+  - 메모 리스트 화면
+- **색상 변경만 적용** - 다른 스타일은 변경하지 않음
+
+#### 📝 수정된 파일
+- `lib/features/home/presentation/widgets/home_memo_section.dart` - 배경색 `#1A1A1A` → `#181818`
+- `lib/features/memos/presentation/widgets/book_detail_memo_card.dart` - 배경색 `#1A1A1A` → `#181818`
+- `lib/features/memos/presentation/widgets/memo_card.dart` - 배경색 `Colors.black` → `#181818`
+
+---
+
+### 🖼️ 프로필 이미지 업로드 기능 수정 (2025-11-18)
+
+#### 📱 프로필 이미지 변경 문제 해결
+- **이미지 업로드 로직 추가** - 로컬 파일 경로를 Supabase Storage에 업로드하고 signed URL 저장
+  - `_uploadProfileImage()` 메서드 추가
+  - `profile_images` 버킷에 업로드
+  - 1년 유효한 signed URL 생성
+- **이미지 제거 기능** - 이미지 제거 시 빈 문자열 전달하여 DB에서 null로 처리
+- **에러 처리 개선** - 업로드 실패 시 친절한 에러 메시지 표시
+
+#### 📝 수정된 파일
+- `lib/features/profile/presentation/screens/profile_edit_screen.dart` - 이미지 업로드 로직 추가
+- `lib/features/auth/presentation/providers/auth_provider.dart` - 빈 문자열을 null로 처리하는 로직 추가
+
+---
+
+### 🚨 에러 처리 및 로깅 체계 구축 (2025-11-18)
+
+#### 📱 공통 에러 핸들러 구현
+- **에러 코드 넘버링 체계** - 카테고리별 에러 코드 할당
+  - `ERR_1001`: 네트워크 연결 오류
+  - `ERR_1002`: 권한 오류
+  - `ERR_2001`: 업로드 오류
+  - `ERR_3001`: 저장 오류
+  - `ERR_3002`: 등록 오류
+  - `ERR_3003`: 수정 오류
+  - `ERR_3004`: 삭제 오류
+  - `ERR_4001`: 인증 오류
+  - `ERR_5001`: 서버 오류
+  - `ERR_9999`: 알 수 없는 오류
+- **자동 에러 타입 감지** - 에러 객체를 분석하여 자동으로 에러 타입 분류
+- **사용자 친화적 메시지** - 기술적 에러를 사용자가 이해하기 쉬운 메시지로 변환
+- **회색 스낵바 통일** - 모든 에러를 `#838383` 배경색의 스낵바로 표시
+
+#### 📝 에러 로깅
+- **상세 로그 기록** - 에러 코드, 작업명, 에러 객체, 스택 트레이스 기록
+- **로그 형식**: `[ERR_XXXX] 작업명 실패`
+- **에러 타입 및 사용자 메시지 로깅**
+
+#### 📚 문서화
+- **에러 처리 가이드 문서 생성** - `docs/ERROR_HANDLING.md`
+  - 에러 코드 체계 설명
+  - 로깅 규칙 및 형식
+  - 사용 방법 및 예시
+  - 에러 타입 자동 감지 규칙
+
+#### 📝 수정된 파일
+- `lib/core/utils/error_handler.dart` - 신규 생성 (공통 에러 핸들러)
+- `lib/features/memos/presentation/screens/memo_detail_screen.dart` - 공통 에러 핸들러 사용
+- `lib/features/profile/presentation/screens/profile_edit_screen.dart` - 공통 에러 핸들러 사용
+- `lib/features/books/presentation/screens/book_search_screen.dart` - 공통 에러 핸들러 사용
+- `lib/features/books/presentation/screens/book_detail_screen.dart` - 공통 에러 핸들러 사용
+- `docs/ERROR_HANDLING.md` - 신규 생성 (에러 처리 가이드)
+
+---
+
+### 📚 개발자 룰 문서 업데이트 (2025-11-18)
+
+#### 📝 수정/삭제 후 상세 화면 동작 규칙 추가
+- **핵심 원칙** - 상세 화면은 항상 최신 데이터를 반영해야 하며, 수정/삭제 후 즉시 UI가 업데이트되어야 함
+- **수정(Update) 후 동작 패턴** - Provider 무효화, Form Provider 처리, ConsumerStatefulWidget 사용
+- **삭제(Delete) 후 동작 패턴** - Provider 무효화, null 처리, 로직 단순화
+- **나쁜 예시와 체크리스트** - 피해야 할 패턴과 개발 시 확인사항
+
+#### 📝 수정된 파일
+- `docs/DEVELOPER_RULES.md` - 수정/삭제 후 상세 화면 동작 규칙 추가 (버전 1.4.0)
+
+---
+
+## 🚀 [1.0.0-dev] - 2025-11-18
+
 ### 🖼️ 메모 상세 화면 이미지 전체 화면 보기 기능 추가 (2025-11-18)
 
 #### 📱 이미지 더블탭 기능 구현

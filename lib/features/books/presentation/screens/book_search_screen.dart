@@ -7,6 +7,7 @@ import '../providers/book_register_provider.dart';
 import '../../domain/models/naver_book.dart';
 import '../../../../core/providers/analytics_provider.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/utils/error_handler.dart';
 
 class BookSearchScreen extends ConsumerStatefulWidget {
   final bool isFromOnboarding;
@@ -365,12 +366,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('책 등록 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
-          ),
-        );
+        ErrorHandler.showError(context, e, operation: '책 등록');
       }
     }
   }
@@ -397,12 +393,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('책 연결 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
-          ),
-        );
+        ErrorHandler.showError(context, e, operation: '책 연결');
       }
     }
   }
@@ -438,12 +429,7 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('책 등록 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
-          ),
-        );
+        ErrorHandler.showError(context, e, operation: '책 등록');
       }
     }
   }

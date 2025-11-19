@@ -64,6 +64,18 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
     try {
       final memo = await ref.read(memoProvider(widget.memoId).future);
       if (mounted) {
+        // 메모가 삭제되었거나 존재하지 않는 경우 화면 닫기
+        if (memo == null) {
+          if (context.mounted) {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed(AppRoutes.homeName);
+            }
+          }
+          return;
+        }
+        
         _bookId = memo.bookId;
         _contentController.text = memo.content;
         _pageController.text = memo.page?.toString() ?? '';

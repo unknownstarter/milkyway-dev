@@ -10,9 +10,15 @@ final memoRepositoryProvider = Provider((ref) {
   return MemoRepository(Supabase.instance.client);
 });
 
-final memoProvider = FutureProvider.family<Memo, String>((ref, memoId) async {
-  final repository = ref.watch(memoRepositoryProvider);
-  return repository.getMemoById(memoId);
+final memoProvider = FutureProvider.family<Memo?, String>((ref, memoId) async {
+  try {
+    final repository = ref.watch(memoRepositoryProvider);
+    return await repository.getMemoById(memoId);
+  } catch (e) {
+    // 메모가 삭제되었거나 존재하지 않는 경우 null 반환
+    log('메모 조회 실패 (삭제되었을 수 있음): $e');
+    return null;
+  }
 });
 
 final bookMemosProvider =
@@ -91,6 +97,7 @@ final updateMemoProvider = FutureProvider.family<
   );
 
   // 관련된 프로바이더들 새로고침
+  ref.invalidate(memoProvider(params.memoId)); // 메모 상세 화면 갱신
   ref.invalidate(bookMemosProvider(params.bookId));
   ref.invalidate(recentMemosProvider);
   ref.invalidate(homeRecentMemosProvider);
@@ -106,13 +113,13 @@ final deleteMemoProvider =
     await repository.deleteMemo(params.memoId);
 
     // 모든 관련 provider 무효화하여 UI 업데이트
+    ref.invalidate(memoProvider(params.memoId)); // 메모 상세 화면 갱신 (null 반환하여 화면 닫기)
     ref.invalidate(paginatedMemosProvider(params.bookId));
     ref.invalidate(paginatedMemosProvider(null)); // 전체 메모 리스트도 무효화
     ref.invalidate(bookMemosProvider(params.bookId));
     ref.invalidate(recentMemosProvider);
     ref.invalidate(homeRecentMemosProvider);
     ref.invalidate(allMemosProvider);
-    ref.invalidate(memoProvider(params.memoId)); // 메모 상세도 무효화
   },
 );
 
@@ -142,12 +149,13 @@ class PaginatedMemosNotifier extends StateNotifier<AsyncValue<List<Memo>>> {
   }
 
   Future<void> loadInitialMemos() async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     await _loadMemos();
   }
 
   Future<void> loadMoreMemos() async {
-    if (!_hasMore) return;
+    if (!_hasMore || !mounted) return;
     _page++;
     await _loadMemos();
   }
@@ -160,6 +168,9 @@ class PaginatedMemosNotifier extends StateNotifier<AsyncValue<List<Memo>>> {
         bookId: bookId,
       );
 
+      // dispose된 후에는 state를 업데이트하지 않음
+      if (!mounted) return;
+
       _hasMore = memos.length == _limit;
 
       if (_page == 0) {
@@ -171,6 +182,8 @@ class PaginatedMemosNotifier extends StateNotifier<AsyncValue<List<Memo>>> {
         ]);
       }
     } catch (e, st) {
+      // dispose된 후에는 state를 업데이트하지 않음
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }

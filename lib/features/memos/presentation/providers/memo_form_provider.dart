@@ -141,8 +141,14 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
         imageUrl: imageUrl,
         visibility: visibility,
       );
+      // 메모 상세 화면 갱신을 위해 memoProvider 무효화
+      ref.invalidate(memoProvider(memoId));
       ref.invalidate(bookMemosProvider(bookId));
       ref.invalidate(recentMemosProvider);
+      ref.invalidate(homeRecentMemosProvider);
+      ref.invalidate(allMemosProvider);
+      ref.invalidate(paginatedMemosProvider(bookId));
+      ref.invalidate(paginatedMemosProvider(null));
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/providers/analytics_provider.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/utils/error_handler.dart';
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key});
@@ -18,6 +20,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _nicknameController = TextEditingController();
   bool _isLoading = false;
   String? _selectedImagePath;
+  bool _isImageRemoved = false;
 
   @override
   void initState() {
@@ -310,6 +313,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   void _removeImage() {
     setState(() {
       _selectedImagePath = null;
+      _isImageRemoved = true;
     });
   }
 
@@ -406,9 +410,29 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     });
 
     try {
+      // 프로필 이미지 처리
+      String? uploadedImageUrl;
+      if (_isImageRemoved) {
+        // 이미지 제거 요청
+        uploadedImageUrl = '';
+      } else if (_selectedImagePath != null) {
+        // 새 이미지 업로드
+        uploadedImageUrl = await _uploadProfileImage(_selectedImagePath!);
+        if (uploadedImageUrl == null) {
+          if (mounted) {
+            ErrorHandler.showErrorSnackBar(
+              context,
+              message: '프로필 이미지 업로드에 실패했습니다',
+            );
+          }
+          return;
+        }
+      }
+      // _selectedImagePath가 null이고 _isImageRemoved가 false면 기존 이미지 유지 (uploadedImageUrl = null)
+
       await ref.read(authProvider.notifier).updateProfile(
         nickname: _nicknameController.text.trim(),
-        pictureUrl: _selectedImagePath,
+        pictureUrl: uploadedImageUrl,
       );
 
       if (mounted) {
@@ -422,12 +446,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('프로필 수정 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
-          ),
-        );
+        ErrorHandler.showError(context, e, operation: '프로필 수정');
       }
     } finally {
       if (mounted) {
@@ -435,6 +454,38 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// 프로필 이미지를 Supabase Storage에 업로드하고 signed URL을 반환
+  Future<String?> _uploadProfileImage(String filePath) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      
+      if (userId == null) {
+        return null;
+      }
+
+      final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File(filePath);
+
+      // 파일 존재 여부 확인
+      if (!await file.exists()) {
+        return null;
+      }
+
+      // Supabase Storage에 업로드
+      await supabase.storage.from('profile_images').upload(fileName, file);
+
+      // Signed URL 생성 (1년 유효)
+      final imageUrl = await supabase.storage
+          .from('profile_images')
+          .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+
+      return imageUrl;
+    } catch (e) {
+      return null;
     }
   }
 }
