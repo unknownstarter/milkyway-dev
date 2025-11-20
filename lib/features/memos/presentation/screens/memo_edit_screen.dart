@@ -204,7 +204,9 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
                   onSelectImage: _selectImage,
                   onRemoveImage: _removeImage,
         ),
-                const SizedBox(height: 100), // 하단 버튼 공간 확보
+                SizedBox(
+                  height: 50 + 20 + 20 + MediaQuery.of(context).padding.bottom + 20, // 버튼 높이 + 상하 패딩 + SafeArea + 여유 공간
+                ),
               ],
             ),
             ),
