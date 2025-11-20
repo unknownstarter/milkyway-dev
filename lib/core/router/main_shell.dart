@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
 
@@ -39,7 +40,6 @@ class MainShell extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(
               minHeight: 64,
-              maxHeight: 70,
             ),
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
@@ -117,41 +117,52 @@ class MainShell extends StatelessWidget {
     required bool isActive,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        constraints: const BoxConstraints(
-          minWidth: 60,
-          maxWidth: 80,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              isActive ? activeIcon : icon,
-              size: 20,
-              color:
-                  isActive ? const Color(0xFFF3F3F3) : const Color(0xFF757575),
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // 가벼운 진동 피드백
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(12),
+          // 클릭 영역을 넓히기 위해 최소 높이 설정 (보이지 않는 영역)
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: 48, // 최소 터치 영역 (보이지 않는 영역 포함)
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-                color: isActive
-                    ? const Color(0xFFF3F3F3)
-                    : const Color(0xFF757575),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  isActive ? activeIcon : icon,
+                  size: 20, // 원래 크기로 복원
+                  color: isActive
+                      ? const Color(0xFFF3F3F3)
+                      : const Color(0xFF757575),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                    color: isActive
+                        ? const Color(0xFFF3F3F3)
+                        : const Color(0xFF757575),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

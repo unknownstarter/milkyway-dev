@@ -3,12 +3,55 @@
 ## 📋 버전 관리
 
 **현재 버전:** 1.0.0-dev  
-**최종 업데이트:** 2025-11-19  
+**최종 업데이트:** 2025-11-20  
 **개발 상태:** 개발 중
 
 ---
 
 ## 🚀 [1.0.0-dev] - 2025-11-19
+
+### 🎨 UI/UX 개선 및 배포 준비 (2025-11-20)
+
+#### 📱 스플래시 화면 개선
+- **스플래시 화면 표시 시간 보장** - 스플래시 화면이 최소 1.5초 동안 표시되도록 수정
+  - `splash_screen.dart`에서 `_validateSession()` 호출 전 1.5초 지연 추가
+  - 사용자가 스플래시 화면을 충분히 볼 수 있도록 개선
+- **iOS Launch Screen 배경색 변경** - TestFlight에서 하얀 화면이 나오는 문제 해결
+  - `LaunchScreen.storyboard`의 배경색을 검은색으로 변경
+  - Flutter 엔진 로드 전 네이티브 레벨에서 검은 배경 표시
+- **Flutter 스플래시 애니메이션 개선** - 가로형 로고가 부드럽게 나타나도록 개선
+  - 애니메이션 지속 시간을 1.5초로 증가
+  - `Curves.easeInOut` 적용하여 더 부드러운 페이드 인 효과
+
+#### 🎯 하단 네비게이션 바 개선
+- **클릭 영역 확대** - 하단 네비게이션 바의 각 탭 메뉴 클릭 영역을 넓혀 탭이 쉬워지도록 개선
+  - `Expanded` 위젯으로 각 버튼이 동일한 공간 차지
+  - `Material`과 `InkWell`을 사용하여 더 큰 클릭 영역과 리플 효과 제공
+  - `minHeight: 48` 설정으로 최소 터치 영역 확보
+- **오버플로우 수정** - 클릭 영역 확대로 인한 오버플로우 문제 해결
+  - Container의 `maxHeight` 제약 제거
+  - 아이콘 크기와 padding 조정으로 콘텐츠 크기 최적화
+- **햅틱 피드백 추가** - 카카오톡처럼 가벼운 진동 피드백 추가
+  - `HapticFeedback.selectionClick()` 사용하여 가벼운 "툭" 느낌의 진동 제공
+  - iOS/Android 모두 권한 없이 사용 가능
+
+#### 🔧 배포 설정 수정
+- **Bundle ID 수정** - App Store Connect와 일치하도록 Bundle ID 변경
+  - `com.whatif.milkyway.whatifMilkywayApp` → `com.whatif.milkyway`
+  - Xcode가 기존 App Store Connect 앱을 올바르게 인식하도록 수정
+  - Archive 생성 시 자동으로 기존 앱에 연결되도록 개선
+- **Xcode 서명 설정 개선** - 자동 서명이 제대로 작동하도록 설정 추가
+  - `CODE_SIGN_STYLE = Automatic` 추가 (Debug, Release, Profile)
+  - Team과 Bundle Identifier 확인 및 설정
+
+#### 📝 수정된 파일
+- `lib/features/splash/presentation/screens/splash_screen.dart` - 스플래시 표시 시간 추가
+- `lib/features/splash/presentation/widgets/splash_layout.dart` - 애니메이션 개선
+- `ios/Runner/Base.lproj/LaunchScreen.storyboard` - 배경색 검은색으로 변경
+- `lib/core/router/main_shell.dart` - 클릭 영역 확대, 오버플로우 수정, 햅틱 피드백 추가
+- `ios/Runner.xcodeproj/project.pbxproj` - Bundle ID 변경, CODE_SIGN_STYLE 추가
+
+---
 
 ### 🐛 메모 및 UI 버그 수정 (2025-11-19)
 

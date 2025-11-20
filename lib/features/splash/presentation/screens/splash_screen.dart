@@ -21,7 +21,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _validateSession();
+    // 스플래시 화면 최소 표시 시간 보장 (1.5초)
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        _validateSession();
+      }
+    });
   }
 
   Future<void> _validateSession() async {
