@@ -23,6 +23,7 @@
 | onboarding_completed | boolean | NULLABLE | false | 온보딩 완료 여부 |
 | auth_provider | auth_provider_type | NOT NULL | 'google' | 인증 제공자 enum |
 | kakao_id | bigint | UNIQUE, NULLABLE | - | 카카오 ID (미래용) |
+| referral_code | text | UNIQUE, NULLABLE | - | 추천 코드 (6자리, 영문 대소문자+숫자, 자동 생성) |
 
 **Enum Types**:
 - `gender_type`: 'male', 'female', 'other', 'not_specified'
@@ -248,6 +249,16 @@ WHERE b.isbn = ?
 
 ## 변경 이력
 
+### v1.2 (2025-11-19)
+- users 테이블에 referral_code 컬럼 추가
+  - UNIQUE 제약조건이 있는 text 타입 컬럼
+  - 영문 대소문자+숫자로 구성된 고유 6자리 코드 자동 생성
+  - 새 사용자 생성 시 Trigger로 자동 생성
+  - 기존 사용자 64명 모두에게 referral_code 부여 완료
+- `generate_referral_code()` 함수 추가
+- `set_referral_code_on_insert()` Trigger 함수 추가
+- `trigger_set_referral_code` Trigger 추가
+
 ### v1.1 (2025-01-22)
 - 실제 데이터베이스 스키마와 문서 동기화
 - users 테이블: created_at, updated_at NULLABLE로 수정
@@ -264,7 +275,7 @@ WHERE b.isbn = ?
 
 **⚠️ 중요**: 이 스키마를 변경하려면 반드시 Product Team과 협의하세요.
 
-**마지막 업데이트**: 2025-01-22 (실제 DB 스키마와 동기화 완료)
+**마지막 업데이트**: 2025-11-19 (referral_code 컬럼 추가)
 **데이터베이스**: Supabase PostgreSQL
-**버전**: 1.1
+**버전**: 1.2
 

@@ -1,8 +1,8 @@
 import 'package:dartz/dartz.dart';
-import 'package:whatif_milkyway_app/core/errors/failures.dart';
-import 'package:whatif_milkyway_app/features/auth/data/datasources/auth_remote_data_source.dart';
-import 'package:whatif_milkyway_app/features/auth/domain/entities/user.dart';
-import 'package:whatif_milkyway_app/features/auth/domain/repositories/auth_repository.dart';
+import '../../../../core/errors/failures.dart';
+import '../datasources/auth_remote_data_source.dart';
+import '../../domain/entities/user.dart';
+import '../../domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;

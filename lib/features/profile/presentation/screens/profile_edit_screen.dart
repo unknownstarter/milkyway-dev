@@ -25,8 +25,20 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   @override
   void initState() {
     super.initState();
+    // initState에서는 ref를 사용할 수 없으므로 didChangeDependencies에서 처리
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 화면 재진입 시 최신 사용자 정보 로드 (예: 프로필 수정 후 돌아올 때)
     _loadUserData();
-    ref.read(analyticsProvider).logScreenView('profile_edit_screen');
+    // Analytics는 빌드 후에 실행
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(analyticsProvider).logScreenView('profile_edit_screen');
+      }
+    });
   }
 
   @override
@@ -36,9 +48,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   }
 
   void _loadUserData() {
+    // didChangeDependencies에서 호출되므로 ref 사용 가능
     final user = ref.read(authProvider).value;
     if (user != null) {
-      _nicknameController.text = user.nickname;
+      // 닉네임이 변경된 경우에만 컨트롤러 업데이트 (무한 루프 방지)
+      if (_nicknameController.text != user.nickname) {
+        _nicknameController.text = user.nickname;
+      }
     }
   }
 
@@ -94,6 +110,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             
             // 로그아웃 버튼
             _buildLogoutButton(),
+            const SizedBox(height: 16),
+            
+            // 계정 삭제 버튼
+            _buildDeleteAccountButton(),
           ],
         ),
       ),
@@ -384,12 +404,90 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('로그아웃 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
+        ErrorHandler.showError(context, e, operation: '로그아웃');
+      }
+    }
+  }
+
+  Widget _buildDeleteAccountButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton(
+        onPressed: _deleteAccount,
+        style: TextButton.styleFrom(
+          backgroundColor: Colors.grey.shade800,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.shade700, width: 1),
           ),
-        );
+        ),
+        child: const Text(
+          '계정 삭제',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Pretendard',
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount() async {
+    // 계정 삭제 확인 다이얼로그
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          '계정 삭제',
+          style: TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+        ),
+        content: const Text(
+          '계정을 삭제하면 모든 책과 메모들이 영구적으로 삭제되며 복구할 수 없습니다.\n\n정말 계정을 삭제하시겠습니까?',
+          style: TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              '취소',
+              style: TextStyle(color: Colors.grey, fontFamily: 'Pretendard'),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              '확인',
+              style: TextStyle(color: Colors.red, fontFamily: 'Pretendard'),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await ref.read(authProvider.notifier).deleteAccount();
+      if (mounted) {
+        context.goNamed(AppRoutes.loginName);
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showError(context, e, operation: '계정 삭제');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }

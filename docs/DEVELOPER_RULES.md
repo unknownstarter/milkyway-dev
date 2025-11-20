@@ -2,9 +2,9 @@
 
 ## 📋 개발 가이드라인
 
-**최종 업데이트:** 2025-11-18  
+**최종 업데이트:** 2025-11-20  
 **적용 대상:** 모든 개발자  
-**버전:** 1.4.0
+**버전:** 1.6.0
 
 ## 🎯 핵심 원칙
 
@@ -519,6 +519,77 @@ Future<void> _deleteItem(...) async {
 - [ ] 사용자가 즉시 변경사항을 확인할 수 있는가?
 - [ ] 불필요한 복잡한 로직이 없는가?
 
+## 🗄️ Supabase 데이터 처리 규칙
+
+### 1. 조인 결과 처리
+Supabase의 조인 쿼리 결과는 **배열 또는 객체**로 반환될 수 있으므로, 두 경우를 모두 처리해야 합니다.
+
+```dart
+// ✅ 좋은 예: 배열과 객체 모두 처리
+factory Memo.fromJson(Map<String, dynamic> json) {
+  Map<String, dynamic>? users;
+  final usersData = json['users'];
+  if (usersData != null) {
+    if (usersData is List && usersData.isNotEmpty) {
+      // 배열인 경우 첫 번째 요소 사용
+      users = usersData[0] as Map<String, dynamic>?;
+    } else if (usersData is Map<String, dynamic>) {
+      // 객체인 경우 그대로 사용
+      users = usersData;
+    }
+  }
+
+  return Memo(
+    // ...
+    userNickname: users?['nickname'],
+    userAvatarUrl: users?['picture_url'],
+  );
+}
+
+// ❌ 나쁜 예: 객체만 가정
+factory Memo.fromJson(Map<String, dynamic> json) {
+  final users = json['users'] as Map<String, dynamic>?; // 배열일 때 에러 발생
+  // ...
+}
+```
+
+### 2. 프로필 업데이트 시 관련 Provider 무효화
+프로필 정보(닉네임, 프로필 이미지)가 변경되면, 해당 정보를 표시하는 모든 화면의 provider를 무효화해야 합니다.
+
+```dart
+// ✅ 좋은 예: 프로필 업데이트 시 관련 provider 무효화
+Future<void> updateProfile({
+  String? nickname,
+  String? pictureUrl,
+}) async {
+  // ... DB 업데이트 로직 ...
+  
+  // 프로필 업데이트 시 메모 관련 provider들 무효화하여 최신 프로필 정보 반영
+  ref.invalidate(recentMemosProvider);
+  ref.invalidate(homeRecentMemosProvider);
+  ref.invalidate(allMemosProvider);
+  ref.invalidate(paginatedMemosProvider(null)); // 모든 메모 리스트
+  // 다른 bookId들은 사용자가 접근할 때 자동으로 새로 로드됨
+}
+
+// ❌ 나쁜 예: provider 무효화 누락
+Future<void> updateProfile({...}) async {
+  // ... DB 업데이트만 하고 provider 무효화 안 함
+  // 결과: 메모에 표시되는 프로필 정보가 업데이트되지 않음
+}
+```
+
+### 3. 명시적 파라미터 전달
+null 값을 전달할 때도 명시적으로 전달하여 코드의 의도를 명확히 합니다.
+
+```dart
+// ✅ 좋은 예: 명시적으로 null 전달
+return const MemoList(bookId: null); // 모든 메모를 불러옴
+
+// ❌ 나쁜 예: 기본값에 의존
+return const MemoList(); // bookId가 null인지 명확하지 않음
+```
+
 ## 🧪 테스트 규칙
 
 ### 1. 단위 테스트
@@ -937,10 +1008,108 @@ context.push('/books/detail/$bookId?$queryParams');
 - [ ] 온보딩 플로우와 일반 플로우가 구분되는가?
 - [ ] `context.go()`와 `context.push()`를 올바르게 사용하는가?
 
+## 📦 배포 및 App Store Connect 규칙 (2025-11-20 추가)
+
+### 1. Bundle ID 관리 규칙
+
+#### ⚠️ 중요: Bundle ID는 App Store Connect와 정확히 일치해야 함
+```dart
+// ✅ 올바른 예: App Store Connect의 Bundle ID와 일치
+PRODUCT_BUNDLE_IDENTIFIER = com.whatif.milkyway;
+
+// ❌ 잘못된 예: App Store Connect와 다른 Bundle ID
+PRODUCT_BUNDLE_IDENTIFIER = com.whatif.milkyway.whatifMilkywayApp;
+```
+
+#### Bundle ID 확인 절차
+1. **App Store Connect에서 확인**: https://appstoreconnect.apple.com → My Apps → 앱 선택 → App Information → Bundle ID 확인
+2. **프로젝트 Bundle ID 확인**: Xcode → TARGETS → Runner → Signing & Capabilities → Bundle Identifier 확인
+3. **일치 여부 확인**: 두 Bundle ID가 정확히 일치하는지 확인 (대소문자, 점 포함)
+
+#### Bundle ID 수정 방법
+```bash
+# project.pbxproj 파일에서 모든 Bundle ID 변경
+# Runner 타겟: com.whatif.milkyway
+# RunnerTests 타겟: com.whatif.milkyway.RunnerTests
+```
+
+### 2. Xcode 서명 설정 규칙
+
+#### 자동 서명 설정 필수
+```dart
+// ✅ 올바른 설정: Debug, Release, Profile 모두에 설정
+CODE_SIGN_STYLE = Automatic;
+DEVELOPMENT_TEAM = U8354289DY; // 또는 해당 팀 ID
+PRODUCT_BUNDLE_IDENTIFIER = com.whatif.milkyway;
+```
+
+#### 서명 설정 확인 체크리스트
+- [ ] `CODE_SIGN_STYLE = Automatic`이 모든 빌드 설정에 있는가?
+- [ ] `DEVELOPMENT_TEAM`이 올바르게 설정되어 있는가?
+- [ ] `PRODUCT_BUNDLE_IDENTIFIER`가 App Store Connect와 일치하는가?
+- [ ] Xcode에서 "Automatically manage signing"이 체크되어 있는가?
+
+### 3. Archive 및 배포 규칙
+
+#### Archive 생성 전 확인사항
+1. **Bundle ID 확인**: App Store Connect의 Bundle ID와 일치하는지 확인
+2. **버전 확인**: `pubspec.yaml`의 버전이 올바른지 확인
+3. **서명 확인**: Xcode에서 Signing & Capabilities 확인
+4. **Clean Build**: Product → Clean Build Folder (⇧⌘K)
+
+#### Distribute App 시 주의사항
+- **"Choose an app record" 화면**: Bundle ID가 일치하는 기존 앱을 선택해야 함
+- **새 앱 생성 방지**: Xcode가 새 앱을 만들려고 하면 Bundle ID를 확인해야 함
+- **Archive 이름**: Scheme 이름에 따라 결정되므로, 필요시 Scheme 이름 변경 고려
+
+### 4. iOS Launch Screen 규칙
+
+#### Launch Screen과 Flutter 스플래시의 차이
+- **iOS Launch Screen**: 네이티브 레벨, Flutter 엔진 로드 전에 표시, 정적 이미지만 가능
+- **Flutter 스플래시**: 위젯 레벨, Flutter 엔진 로드 후 표시, 애니메이션 가능
+
+#### Launch Screen 설정 규칙
+```xml
+<!-- ✅ 올바른 설정: 배경색을 앱 테마와 일치 -->
+<color key="backgroundColor" red="0" green="0" blue="0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+
+<!-- ❌ 잘못된 설정: 흰색 배경 (TestFlight에서 하얀 화면 표시) -->
+<color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+```
+
+#### 스플래시 화면 표시 시간
+```dart
+// ✅ 좋은 예: 최소 표시 시간 보장
+@override
+void initState() {
+  super.initState();
+  // 스플래시 화면 최소 표시 시간 보장 (1.5초)
+  Future.delayed(const Duration(milliseconds: 1500), () {
+    if (mounted) {
+      _validateSession();
+    }
+  });
+}
+```
+
+### 5. 배포 체크리스트
+배포 전 다음을 확인하세요:
+- [ ] Bundle ID가 App Store Connect와 정확히 일치하는가?
+- [ ] Xcode 서명 설정이 올바른가? (`CODE_SIGN_STYLE = Automatic`)
+- [ ] Launch Screen 배경색이 앱 테마와 일치하는가?
+- [ ] 버전 번호가 올바른가? (`pubspec.yaml` 확인)
+- [ ] Archive 생성 후 "Choose an app record"에서 올바른 앱이 선택되는가?
+- [ ] TestFlight에서 실제 디바이스로 테스트했는가?
+
+### 6. 배포 시 주의사항
+- **리팩토링 시**: 프로젝트를 리팩토링하거나 새로 설정할 때도 기존 App Store Connect의 Bundle ID를 먼저 확인해야 함
+- **환경 변경 시**: 개발 환경을 변경하거나 새로 설정할 때 Bundle ID가 변경되지 않았는지 확인
+- **팀 변경 시**: Development Team이 변경되면 서명 설정을 다시 확인해야 함
+
 ---
 
 **문서 작성일:** 2025-11-11  
-**최종 업데이트:** 2025-11-18  
+**최종 업데이트:** 2025-11-20  
 **작성자:** AI Assistant  
 **검토자:** 개발팀  
-**다음 검토 예정일:** 2025-12-18
+**다음 검토 예정일:** 2025-12-20

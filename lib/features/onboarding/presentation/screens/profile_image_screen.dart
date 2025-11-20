@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../providers/onboarding_provider.dart';
+import 'dart:developer' as developer;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/providers/analytics_provider.dart';
+import '../../../../core/utils/error_handler.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class ProfileImageScreen extends ConsumerStatefulWidget {
   const ProfileImageScreen({super.key});
@@ -17,6 +21,7 @@ class ProfileImageScreen extends ConsumerStatefulWidget {
 class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
   String? _selectedImagePath;
   bool _isLoading = false;
+  bool _isSelectingImage = false;
 
   @override
   void initState() {
@@ -36,85 +41,117 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
             color: Colors.white,
             fontFamily: 'Pretendard',
             fontWeight: FontWeight.w600,
+            fontSize: 20,
+            height: 28 / 20,
           ),
         ),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed(AppRoutes.onboardingNicknameName);
+            }
+          },
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            
-            // 제목
-            _buildTitle(),
-            const SizedBox(height: 40),
-            
-            // 프로필 이미지
-            _buildProfileImage(),
-            const SizedBox(height: 40),
-            
-            // 이미지 선택 버튼들
-            _buildImageButtons(),
-            const SizedBox(height: 40),
-            
-            // 건너뛰기 버튼
-            _buildSkipButton(),
-            const SizedBox(height: 20),
-            
-            // 다음 버튼
-            _buildNextButton(),
-          ],
-        ),
+      body: Column(
+        children: [
+          // 스크롤 가능한 컨텐츠 영역
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 40),
+                  
+                  // 제목
+                  _buildTitle(),
+                  const SizedBox(height: 40),
+                  
+                  // 프로필 이미지
+                  _buildProfileImage(),
+                  const SizedBox(height: 40),
+                  
+                  // 설명 텍스트
+                  _buildDescription(),
+                ],
+              ),
+            ),
+          ),
+          
+          // 하단 고정 버튼 영역
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 다음 버튼
+                _buildNextButton(),
+                const SizedBox(height: 8),
+                
+                // 건너뛰기 버튼
+                _buildSkipButton(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTitle() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           '프로필 사진을 설정해주세요',
           style: TextStyle(
             color: Colors.white,
             fontSize: 24,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             fontFamily: 'Pretendard',
+            height: 33.6 / 24,
           ),
-          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 12),
-        Text(
-          '나중에 언제든지 변경할 수 있습니다',
+        const SizedBox(height: 8),
+        const Text(
+          '나중에 언제든지 변경할 수 있어요',
           style: TextStyle(
-            color: Colors.grey.shade400,
-            fontSize: 16,
+            color: Color(0xFF838383),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
             fontFamily: 'Pretendard',
+            height: 16.8 / 12,
           ),
-          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
   Widget _buildProfileImage() {
-    return GestureDetector(
-      onTap: _selectImage,
-      child: Container(
-        width: 200,
-        height: 200,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: const Color(0xFF48FF00),
-            width: 4,
+    return Center(
+      child: GestureDetector(
+        onTap: _isSelectingImage ? null : _selectImage,
+        child: Opacity(
+          opacity: _isSelectingImage ? 0.5 : 1.0,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFF48FF00),
+                width: 4,
+              ),
+            ),
+            child: ClipOval(
+              child: _getProfileImage(),
+            ),
           ),
-        ),
-        child: ClipOval(
-          child: _getProfileImage(),
         ),
       ),
     );
@@ -142,170 +179,145 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
     }
   }
 
-  Widget _buildImageButtons() {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _selectImage,
-            icon: const Icon(Icons.photo_library, color: Colors.black),
-            label: const Text(
-              '갤러리에서 선택',
-              style: TextStyle(
-                color: Colors.black,
-                fontFamily: 'Pretendard',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF48FF00),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+  Widget _buildDescription() {
+    return Center(
+      child: Column(
+        children: [
+          const Text(
+            '등록된 프로필 사진은\n남겨주신 메모와 함께 보여져요',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Pretendard',
+              height: 33.6 / 24,
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _takePhoto,
-            icon: const Icon(Icons.camera_alt, color: Color(0xFF48FF00)),
-            label: const Text(
-              '카메라로 촬영',
-              style: TextStyle(
-                color: Color(0xFF48FF00),
-                fontFamily: 'Pretendard',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Color(0xFF48FF00)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        if (_selectedImagePath != null) ...[
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _removeImage,
-              icon: const Icon(Icons.delete, color: Colors.red),
-              label: const Text(
-                '사진 제거',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontFamily: 'Pretendard',
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+          const SizedBox(height: 20),
+          const Text(
+            '공개 설정한 메모만 보여지니 걱정마세요',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF838383),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Pretendard',
+              height: 16.8 / 12,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
   Widget _buildSkipButton() {
-    return TextButton(
-      onPressed: _isLoading ? null : _skipImage,
-      child: Text(
-        '건너뛰기',
-        style: TextStyle(
-          color: Colors.grey.shade400,
-          fontSize: 16,
-          fontFamily: 'Pretendard',
+    return Center(
+      child: TextButton(
+        onPressed: _isLoading ? null : _skipImage,
+        child: const Text(
+          '건너뛰기',
+          style: TextStyle(
+            color: Color(0xFF6B7280),
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            fontFamily: 'Pretendard',
+            height: 16.8 / 12,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildNextButton() {
-    return SizedBox(
+    final isEnabled = _selectedImagePath != null && !_isLoading;
+    
+    return Container(
       width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _next,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF48FF00),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      height: 41,
+      decoration: BoxDecoration(
+        color: isEnabled ? const Color(0xFFDEDEDE) : const Color(0xFF838383),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isEnabled ? _next : null,
+          borderRadius: BorderRadius.circular(20),
+          child: Center(
+            child: _isLoading
+                ? const CircularProgressIndicator(
+                    color: Color(0xFFECECEC),
+                    strokeWidth: 2,
+                  )
+                : Text(
+                    '다음',
+                    style: TextStyle(
+                      color: isEnabled ? Colors.black : Colors.white,
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      height: 24 / 16,
+                    ),
+                  ),
           ),
         ),
-        child: _isLoading
-            ? const CircularProgressIndicator(
-                color: Color(0xFFECECEC),
-                strokeWidth: 2,
-              )
-            : const Text(
-                '다음',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Pretendard',
-                ),
-              ),
       ),
     );
   }
 
   Future<void> _selectImage() async {
+    if (_isSelectingImage) return;
+    
+    setState(() {
+      _isSelectingImage = true;
+    });
+    
     try {
       final picker = ImagePicker();
       final image = await picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
+      if (image != null && mounted) {
         setState(() {
           _selectedImagePath = image.path;
         });
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
-          backgroundColor: const Color(0xFF242424),
-        ),
-      );
-    }
-  }
-
-  Future<void> _takePhoto() async {
-    try {
-      final picker = ImagePicker();
-      final image = await picker.pickImage(source: ImageSource.camera);
-      if (image != null) {
-        setState(() {
-          _selectedImagePath = image.path;
-        });
+    } on PlatformException catch (e) {
+      if (mounted) {
+        // 권한 관련 에러 처리
+        if (e.code == 'photo_access_denied' || 
+            e.code == 'camera_access_denied' ||
+            e.code.contains('permission') ||
+            e.code.contains('denied')) {
+          ErrorHandler.showError(
+            context,
+            e,
+            operation: '프로필 이미지 선택',
+          );
+        } else {
+          ErrorHandler.showError(
+            context,
+            e,
+            operation: '프로필 이미지 선택',
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('사진 촬영 중 오류가 발생했습니다: $e'),
-          backgroundColor: const Color(0xFF242424),
-        ),
-      );
+      if (mounted) {
+        ErrorHandler.showError(
+          context,
+          e,
+          operation: '프로필 이미지 선택',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSelectingImage = false;
+        });
+      }
     }
   }
 
-  void _removeImage() {
-    setState(() {
-      _selectedImagePath = null;
-    });
-  }
 
   Future<void> _skipImage() async {
     await _next();
@@ -319,20 +331,36 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
     try {
       // 프로필 이미지 저장
       if (_selectedImagePath != null) {
-        await ref.read(onboardingProvider.notifier).setProfileImage(_selectedImagePath!);
+        // Supabase Storage에 이미지 업로드
+        final uploadedImageUrl = await _uploadProfileImage(_selectedImagePath!);
+        if (uploadedImageUrl != null && mounted) {
+          // 데이터베이스에 프로필 이미지 URL 저장
+          await ref.read(authProvider.notifier).updateProfile(
+            pictureUrl: uploadedImageUrl,
+          );
+        } else if (mounted) {
+          ErrorHandler.showError(
+            context,
+            Exception('프로필 이미지 업로드에 실패했습니다'),
+            operation: '프로필 이미지 업로드',
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
       }
 
       // 다음 화면으로 이동
       if (mounted) {
-        context.goNamed(AppRoutes.onboardingBookIntroName);
+        context.pushNamed(AppRoutes.onboardingBookIntroName);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('프로필 이미지 저장 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF242424),
-          ),
+        ErrorHandler.showError(
+          context,
+          e,
+          operation: '프로필 이미지 저장',
         );
       }
     } finally {
@@ -341,6 +369,44 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// 프로필 이미지를 Supabase Storage에 업로드하고 signed URL 반환
+  Future<String?> _uploadProfileImage(String filePath) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final file = File(filePath);
+      final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePathInStorage = 'profile_images/$fileName';
+
+      // Storage에 업로드
+      await supabase.storage.from('profile_images').upload(
+        filePathInStorage,
+        file,
+        fileOptions: const FileOptions(
+          upsert: true,
+          contentType: 'image/jpeg',
+        ),
+      );
+
+      // Signed URL 생성 (1년 유효)
+      final signedUrl = await supabase.storage
+          .from('profile_images')
+          .createSignedUrl(
+            filePathInStorage,
+            31536000, // 1년 (초 단위)
+          );
+
+      return signedUrl;
+    } catch (e) {
+      developer.log('프로필 이미지 업로드 실패: $e');
+      return null;
     }
   }
 }

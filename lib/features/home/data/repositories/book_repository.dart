@@ -123,23 +123,19 @@ class BookRepository {
 
   Future<Book?> findBookByIsbn(String isbn) async {
     try {
+      // ISBN으로 books 테이블에서 직접 찾기 (user_id 필터링 제거)
       final response = await _client
-          .from('user_books')
-          .select('''
-            *,
-            books!inner (
-              *
-            )
-          ''')
-          .eq('user_id', _client.auth.currentUser!.id)
-          .eq('books.isbn', isbn)
+          .from('books')
+          .select()
+          .eq('isbn', isbn)
           .maybeSingle();
 
       if (response == null) return null;
 
+      // Book 객체로 변환 (status는 기본값 사용)
       return Book.fromJson({
-        ...response['books'] as Map<String, dynamic>,
-        'status': response['status'],
+        ...response,
+        'status': BookStatus.wantToRead.value,
       });
     } catch (e) {
       print('Error finding book by ISBN: $e');
@@ -179,7 +175,11 @@ class BookRepository {
   }
 
   String getCurrentUserId() {
-    return _client.auth.currentUser!.id;
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated. Please log in again.');
+    }
+    return user.id;
   }
 
   Future<void> createUserBookConnection(String bookId, String userId) async {
@@ -190,5 +190,23 @@ class BookRepository {
     });
   }
 
+  /// 사용자-책 관계 삭제 및 해당 책의 메모들도 삭제
+  Future<void> deleteUserBook(String bookId) async {
+    final userId = getCurrentUserId();
+    
+    // 1. 해당 책의 메모들 삭제 (user_id와 book_id 모두 일치하는 메모)
+    await _client
+        .from('memos')
+        .delete()
+        .eq('book_id', bookId)
+        .eq('user_id', userId);
+    
+    // 2. user_books에서 사용자-책 관계 삭제
+    await _client
+        .from('user_books')
+        .delete()
+        .eq('book_id', bookId)
+        .eq('user_id', userId);
+  }
 
 }

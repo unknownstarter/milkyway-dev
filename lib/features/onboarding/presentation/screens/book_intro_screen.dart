@@ -1,188 +1,247 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:whatif_milkyway_app/core/presentation/widgets/star_background_scaffold.dart';
-import 'package:whatif_milkyway_app/features/auth/presentation/providers/auth_provider.dart';
-import 'package:whatif_milkyway_app/features/onboarding/presentation/providers/onboarding_provider.dart';
-import 'package:whatif_milkyway_app/core/providers/analytics_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/providers/analytics_provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:whatif_milkyway_app/core/router/app_routes.dart';
+import '../../../../core/router/app_routes.dart';
+import '../../../../core/utils/error_handler.dart';
 
-class BookIntroScreen extends ConsumerWidget {
+class BookIntroScreen extends ConsumerStatefulWidget {
   const BookIntroScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+  ConsumerState<BookIntroScreen> createState() => _BookIntroScreenState();
+}
 
-    // PV 이벤트 추가
+class _BookIntroScreenState extends ConsumerState<BookIntroScreen> {
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
     ref.read(analyticsProvider).logScreenView('book_intro_screen');
+  }
 
-    return StarBackgroundScaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 상단 헤더
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF181818),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF181818),
+        title: const Text(
+          '시작하기',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+            height: 28 / 20,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: Column(
+        children: [
+          // 스크롤 가능한 컨텐츠 영역
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
                 children: [
-                  Image.asset('assets/images/logo.png', width: 40, height: 40),
-                  Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 24,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF48FF00),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      ref.read(onboardingProvider.notifier).previousStep();
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
+                  const SizedBox(height: 40),
+                  
+                  // 우주 이미지
+                  _buildUniverseImage(),
+                  
+                  const SizedBox(height: 40),
+                  
+                  // 설명 텍스트
+                  _buildDescription(),
                 ],
               ),
+            ),
+          ),
+          
+          // 하단 고정 버튼 영역
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 책 검색하고 시작하기 버튼
+                _buildStartButton(),
+                const SizedBox(height: 8),
+                
+                // 다음에 하기 버튼
+                _buildSkipButton(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // 중앙 컨텐츠 (스크롤 가능)
-              if (isLandscape)
-                Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: MediaQuery.of(context).size.height -
-                              180, // 상단바와 하단 버튼 공간 확보
-                        ),
-                        child: _buildCenterContent(context, isLandscape),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: Center(
-                    child: _buildCenterContent(context, isLandscape),
-                  ),
-                ),
-
-              // 하단 버튼
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await ref.read(analyticsProvider).logButtonClick(
-                          'start_onboarding',
-                          'book_intro_screen',
-                        );
-                    // 온보딩 완료 처리
-                    await ref
-                        .read(authProvider.notifier)
-                        .updateOnboardingStatus(true);
-
-                    // 온보딩 완료 시
-                    await ref.read(analyticsProvider).logOnboardingComplete();
-
-                    // 홈 화면으로 이동하면서 자동 책 검색 플래그 설정
-                    if (context.mounted) {
-                      context.goNamed(
-                        AppRoutes.homeName,
-                        queryParameters: {'autoBookSearch': 'true'},
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3C19E1),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text(
-                    '책 검색하고 시작!',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
+  Widget _buildUniverseImage() {
+    return Center(
+      child: ShaderMask(
+        shaderCallback: (Rect bounds) {
+          return RadialGradient(
+            center: Alignment.center,
+            radius: 0.5,
+            colors: [
+              Colors.white,
+              Colors.white.withAlpha(0),
             ],
+            stops: const [0.7, 1.0],
+          ).createShader(bounds);
+        },
+        child: Image.asset(
+          'assets/images/stars_bg.png',
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.width * 0.8,
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDescription() {
+    return const Center(
+      child: Text(
+        '이제 책을 읽으며\n떠오른 반짝이는 생각을\n메모하고 저장해요 ✨',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.white,
+          fontFamily: 'Pretendard',
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          height: 33.6 / 24,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStartButton() {
+    return Container(
+      width: double.infinity,
+      height: 41,
+      decoration: BoxDecoration(
+        color: const Color(0xFFDEDEDE),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleStart,
+          borderRadius: BorderRadius.circular(20),
+          child: Center(
+            child: _isLoading
+                ? const CircularProgressIndicator(
+                    color: Color(0xFFECECEC),
+                    strokeWidth: 2,
+                  )
+                : const Text(
+                    '책 검색하고 시작하기',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      height: 24 / 16,
+                    ),
+                  ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCenterContent(BuildContext context, bool isLandscape) {
-    return Column(
-      mainAxisSize: isLandscape ? MainAxisSize.min : MainAxisSize.max,
-      children: [
-        if (!isLandscape) const Spacer(),
-        ShaderMask(
-          shaderCallback: (Rect bounds) {
-            return RadialGradient(
-              center: Alignment.center,
-              radius: 0.5,
-              colors: [
-                Colors.white,
-                Colors.white.withAlpha(0),
-              ],
-              stops: const [0.7, 1.0],
-            ).createShader(bounds);
-          },
-          child: Image.asset(
-            'assets/images/stars_bg.png',
-            width: isLandscape
-                ? MediaQuery.of(context).size.height * 0.3 // 가로모드에서는 더 작게
-                : MediaQuery.of(context).size.width * 0.8,
-            height: isLandscape
-                ? MediaQuery.of(context).size.height * 0.3 // 가로모드에서는 더 작게
-                : MediaQuery.of(context).size.width * 0.8,
-            fit: BoxFit.cover,
-          ),
-        ),
-        const SizedBox(height: 40),
-        const Text(
-          '이제 책을 읽으며\n떠오른 반짝이는 생각을\n메모하고 저장해요 ✨',
-          textAlign: TextAlign.center,
+  Widget _buildSkipButton() {
+    return Center(
+      child: TextButton(
+        onPressed: _isLoading ? null : _handleSkip,
+        child: const Text(
+          '다음에 하기',
           style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            height: 1.5,
+            color: Color(0xFF6B7280),
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            fontFamily: 'Pretendard',
+            height: 16.8 / 12,
           ),
         ),
-        if (!isLandscape) const Spacer(),
-      ],
+      ),
     );
+  }
+
+  Future<void> _handleStart() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await ref.read(analyticsProvider).logButtonClick(
+            'start_onboarding',
+            'book_intro_screen',
+          );
+
+      // 온보딩 완료 처리
+      await ref.read(authProvider.notifier).updateOnboardingStatus(true);
+
+      // 세션 동기화를 위해 사용자 정보 다시 가져오기
+      await ref.read(authProvider.notifier).getCurrentUser();
+
+      // 온보딩 완료 이벤트
+      await ref.read(analyticsProvider).logOnboardingComplete();
+
+      // 책 검색 페이지로 이동 (온보딩 플래그 포함)
+      if (mounted) {
+        context.goNamed(
+          AppRoutes.bookSearchName,
+          queryParameters: {'isFromOnboarding': 'true'},
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ErrorHandler.showError(context, e, operation: '온보딩 완료');
+      }
+    }
+  }
+
+  Future<void> _handleSkip() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 온보딩 완료 처리
+      await ref.read(authProvider.notifier).updateOnboardingStatus(true);
+
+      // 온보딩 완료 이벤트
+      await ref.read(analyticsProvider).logOnboardingComplete();
+
+      // 홈 화면으로 이동
+      if (mounted) {
+        context.goNamed(AppRoutes.homeName);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }

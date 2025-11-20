@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FeedbackModal extends ConsumerWidget {
   const FeedbackModal({super.key});
@@ -81,11 +82,14 @@ class FeedbackModal extends ConsumerWidget {
                   onPressed: () async {
                     if (textController.text.isNotEmpty) {
                       try {
+                        // 사용자 정보에서 referral_code 가져오기
+                        final referralCode = await _getUserReferralCode(ref, user?.id);
                         await _sendFeedbackEmail(
                           context,
                           textController.text,
                           user?.id,
                           user?.email,
+                          referralCode,
                         );
                         Navigator.pop(context);
                       } catch (e) {
@@ -121,8 +125,27 @@ class FeedbackModal extends ConsumerWidget {
     );
   }
 
+  /// 사용자의 referral_code를 가져오는 헬퍼 함수
+  Future<String?> _getUserReferralCode(WidgetRef ref, String? userId) async {
+    if (userId == null) return null;
+    
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('users')
+          .select('referral_code')
+          .eq('id', userId)
+          .maybeSingle();
+      
+      return response?['referral_code'] as String?;
+    } catch (e) {
+      // 에러 발생 시 null 반환 (referral_code 없이 진행)
+      return null;
+    }
+  }
+
   Future<void> _sendFeedbackEmail(BuildContext context, String feedback,
-      String? userId, String? userEmail) async {
+      String? userId, String? userEmail, String? referralCode) async {
     final deviceInfo = DeviceInfoPlugin();
     final packageInfo = await PackageInfo.fromPlatform();
     String deviceId = '';
@@ -155,6 +178,7 @@ class FeedbackModal extends ConsumerWidget {
 -------------------
 ID: ${userId ?? 'Unknown'}
 Email: ${userEmail ?? 'Unknown'}
+Referral Code: ${referralCode ?? 'Unknown'}
 Device ID: $deviceId
 OS: $os
 App Version: v${packageInfo.version}
