@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/memo_provider.dart';
-import '../../domain/models/memo.dart';
 import '../../domain/models/memo_filter.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import 'book_detail_memo_card.dart';
 import '../../../../core/presentation/widgets/pill_filter_button.dart';
 
@@ -29,17 +27,9 @@ class MemoListView extends ConsumerStatefulWidget {
 class _MemoListViewState extends ConsumerState<MemoListView> {
   MemoFilter _selectedFilter = MemoFilter.myMemos;
   DateTime? _lastScrollTime; // 스크롤 throttle을 위한 마지막 스크롤 시간
-  
-  // 필터링 결과 메모이제이션
-  List<Memo>? _cachedFilteredMemos;
-  MemoFilter? _cachedFilter;
-  int? _cachedMemosLength;
-  String? _cachedUserId;
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = ref.watch(authProvider).value?.id;
-    
     // 필터에 따라 다른 provider 사용
     // "내가 쓴": 현재 사용자의 메모만
     // "모든 메모": 해당 책의 모든 공개 메모 (다른 유저의 것도 포함, 페이지네이션 지원)
@@ -85,10 +75,10 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
         return memosAsyncValue.when(
           data: (memos) {
             // 필터링된 메모 (메모이제이션 적용)
-            // "모든 메모" 필터의 경우 이미 공개 메모만 가져왔으므로 추가 필터링 불필요
-            final filteredMemos = _selectedFilter == MemoFilter.all
-                ? memos // 이미 공개 메모만 가져왔으므로 그대로 사용
-                : _getFilteredMemos(memos, currentUserId);
+            // "모든 메모" 필터: 이미 공개 메모만 가져왔으므로 추가 필터링 불필요
+            // "내가 쓴 메모" 필터: bookMemosProvider가 이미 현재 사용자의 메모만 가져오므로
+            // 공개/비공개 구분 없이 모두 표시 (추가 필터링 불필요)
+            final filteredMemos = memos; // provider에서 이미 올바르게 필터링됨
 
             return Column(
               mainAxisSize: MainAxisSize.min,
@@ -152,37 +142,10 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
     );
   }
 
-  /// 필터링된 메모 반환 (메모이제이션 적용)
-  List<Memo> _getFilteredMemos(List<Memo> memos, String? currentUserId) {
-    // 캐시가 유효한지 확인 (리스트 길이로 비교하여 참조 비교 문제 해결)
-    if (_cachedFilteredMemos != null &&
-        _cachedFilter == _selectedFilter &&
-        _cachedMemosLength == memos.length &&
-        _cachedUserId == currentUserId) {
-      return _cachedFilteredMemos!;
-    }
-
-    // 필터링 실행
-    final filtered = _selectedFilter.filterMemos(memos, currentUserId);
-
-    // 캐시 업데이트
-    _cachedFilteredMemos = filtered;
-    _cachedFilter = _selectedFilter;
-    _cachedMemosLength = memos.length;
-    _cachedUserId = currentUserId;
-
-    return filtered;
-  }
-
-  /// 필터 변경 및 캐시 무효화
+  /// 필터 변경
   void _updateFilter(MemoFilter filter) {
     setState(() {
       _selectedFilter = filter;
-      // 필터 변경 시 캐시 무효화
-      _cachedFilteredMemos = null;
-      _cachedFilter = null;
-      _cachedMemosLength = null;
-      _cachedUserId = null;
     });
     // 필터 변경 시 provider 무효화하여 새로운 데이터 가져오기
     if (filter == MemoFilter.myMemos) {

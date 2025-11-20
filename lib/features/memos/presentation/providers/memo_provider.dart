@@ -263,12 +263,16 @@ class PaginatedMemosNotifier extends StateNotifier<AsyncValue<List<Memo>>> {
     this.bookId,
   })  : _repository = repository,
         super(const AsyncValue.loading()) {
+    // 생성자에서 즉시 로딩 시작
+    // StateNotifier는 생성 시점에 mounted가 true이므로 안전함
     loadInitialMemos();
   }
 
   Future<void> loadInitialMemos() async {
-    if (!mounted) return;
+    // mounted 체크 제거: StateNotifier는 생성 시점부터 mounted가 true
     state = const AsyncValue.loading();
+    _page = 0;
+    _hasMore = true;
     await _loadMemos();
   }
 
