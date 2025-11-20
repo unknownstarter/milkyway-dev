@@ -78,16 +78,19 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
             }
           },
         ),
-        title: const Text(
-          '메모 작성',
-              style: TextStyle(
-            color: Colors.white,
-                fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-            height: 28 / 20,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            '메모 작성',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              height: 28 / 20,
             ),
           ),
+        ),
         centerTitle: true,
       ),
       body: Stack(
@@ -253,7 +256,7 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
     
     return Container(
       width: double.infinity,
-      height: 41,
+      height: 50,
       decoration: BoxDecoration(
         color: isEnabled ? const Color(0xFFDEDEDE) : const Color(0xFF838383),
         borderRadius: BorderRadius.circular(20),
@@ -389,7 +392,10 @@ class _MemoCreateScreenState extends ConsumerState<MemoCreateScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('메모가 저장되었습니다'),
+            content: Text(
+              '메모가 저장되었습니다',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: Color(0xFF242424),
           ),
         );

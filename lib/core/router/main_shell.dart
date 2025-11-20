@@ -146,19 +146,22 @@ class MainShell extends StatelessWidget {
                       : const Color(0xFF757575),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10,
-                    color: isActive
-                        ? const Color(0xFFF3F3F3)
-                        : const Color(0xFF757575),
+                MediaQuery(
+                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                      color: isActive
+                          ? const Color(0xFFF3F3F3)
+                          : const Color(0xFF757575),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
                 ),
               ],
             ),

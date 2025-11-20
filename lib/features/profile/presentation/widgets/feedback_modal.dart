@@ -95,7 +95,10 @@ class FeedbackModal extends ConsumerWidget {
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('이메일을 보내는 중 오류가 발생했습니다.'),
+                            content: Text(
+                              '이메일을 보내는 중 오류가 발생했습니다.',
+                              style: TextStyle(color: Colors.white),
+                            ),
                             backgroundColor: Color(0xFF242424),
                           ),
                         );

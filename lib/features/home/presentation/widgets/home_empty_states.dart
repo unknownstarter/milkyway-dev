@@ -3,16 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'home_profile_section.dart';
 import '../../../../core/router/app_routes.dart';
-
-/// 순환 표시할 문구 리스트
-const List<String> _readingPrompts = [
-  '오늘은 어떤 책을 보고 계신가요?',
-  '지금 읽고 있는 책이 있나요?',
-  '오늘의 독서는 어떤가요?',
-  '어떤 책을 읽고 계신가요?',
-  '지금 읽는 책이 궁금해요',
-  '오늘도 좋은 책과 함께하시나요?',
-];
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../presentation/providers/book_provider.dart';
+import '../../domain/models/book.dart';
+import '../../../../core/utils/error_handler.dart';
+import '../../../books/presentation/providers/user_books_provider.dart';
+import '../../../home/presentation/providers/selected_book_provider.dart';
 
 /// 빈 상태 (책이 없을 때)
 class HomeEmptyState extends ConsumerWidget {
@@ -20,13 +16,8 @@ class HomeEmptyState extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 날짜 기반으로 문구 선택 (매일 다른 문구)
-    final dayOfYear = DateTime.now()
-        .difference(
-          DateTime(DateTime.now().year, 1, 1),
-        )
-        .inDays;
-    final promptIndex = dayOfYear % _readingPrompts.length;
+    final userAsync = ref.watch(authProvider);
+    final popularBooksAsync = ref.watch(popularBooksProvider);
 
     return CustomScrollView(
       slivers: [
@@ -49,7 +40,7 @@ class HomeEmptyState extends ConsumerWidget {
           child: HomeProfileSection(),
         ),
         const SliverToBoxAdapter(
-          child: SizedBox(height: 32),
+          child: SizedBox(height: 60), // 32 -> 60으로 증가하여 하단으로 이동
         ),
         // 빈 상태 콘텐츠
         SliverToBoxAdapter(
@@ -58,51 +49,154 @@ class HomeEmptyState extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _readingPrompts[promptIndex],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Pretendard',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: GestureDetector(
-                    onTap: () => context.goNamed(AppRoutes.bookSearchName),
-                    child: Container(
-                      width: 104,
-                      height: 147,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A1A),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey.shade800,
-                          width: 1,
+                // 닉네임 첫 3글자 + ... 처리
+                userAsync.when(
+                  data: (user) {
+                    final nickname = user?.nickname ?? '';
+                    final displayName = nickname.length > 3
+                        ? '${nickname.substring(0, 3)}...'
+                        : nickname;
+                    return MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        textScaler: TextScaler.linear(1.0),
+                      ),
+                      child: Text(
+                        '$displayName님의 인생 책을 찾아주세요',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Pretendard',
+                          height: 28 / 20,
                         ),
                       ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_circle_outline,
-                            color: Colors.grey,
-                            size: 32,
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 20),
+                // 검색어 입력칸 (탭 시 책 검색으로 이동)
+                GestureDetector(
+                  onTap: () {
+                    context.pushNamed(AppRoutes.bookSearchName);
+                  },
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF646464),
+                        width: 1,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.search,
+                          color: Color(0xFF48FF00),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        MediaQuery(
+                          data: MediaQuery.of(context).copyWith(
+                            textScaler: TextScaler.linear(1.0),
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            '책 등록하기',
+                          child: Text(
+                            '책 제목, 저자, ISBN으로 검색하세요',
                             style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
+                              color: Colors.grey.shade400,
                               fontFamily: 'Pretendard',
+                              fontSize: 16,
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 60), // 40 -> 60으로 증가하여 하단으로 이동
+                // 지금 밀키웨이에서 많이 읽고 있는 책
+                MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    textScaler: TextScaler.linear(1.0),
+                  ),
+                  child: const Text(
+                    '지금 밀키웨이에서 많이 읽고 있는 책',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Pretendard',
+                      height: 28 / 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // 가로 캐로즐
+                popularBooksAsync.when(
+                  data: (books) {
+                    if (books.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return SizedBox(
+                      height: 127, // 높이 조정 (147 -> 127)
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.only(right: 0), // 오른쪽 패딩 제거하여 4번째 책이 살짝 걸쳐 나오도록
+                        itemCount: books.length,
+                        itemBuilder: (context, index) {
+                          final book = books[index];
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              right: index == books.length - 1 ? 0 : 16, // 간격 조정 (20 -> 16)
+                            ),
+                            child: GestureDetector(
+                              onTap: () => _handleBookTap(
+                                context,
+                                ref,
+                                book,
+                              ),
+                              child: Container(
+                                width: 90, // 크기 조정 (104 -> 90)
+                                height: 127, // 크기 조정 (147 -> 127)
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: const Color(0xFF1A1A1A),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: book.coverUrl != null &&
+                                          book.coverUrl!.isNotEmpty
+                                      ? Image.network(
+                                          book.coverUrl!,
+                                          width: 90,
+                                          height: 127,
+                                          fit: BoxFit.contain, // cover -> contain으로 변경하여 이미지가 안 짤리게
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  _buildBookPlaceholder(),
+                                        )
+                                      : _buildBookPlaceholder(),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox(
+                    height: 127, // 높이 조정 (191 -> 127)
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFECECEC),
                       ),
                     ),
                   ),
+                  error: (error, stack) => const SizedBox.shrink(),
                 ),
               ],
             ),
@@ -112,6 +206,114 @@ class HomeEmptyState extends ConsumerWidget {
           child: SizedBox(height: 100), // 하단 네비게이션 바 공간
         ),
       ],
+    );
+  }
+
+  void _handleBookTap(
+    BuildContext context,
+    WidgetRef ref,
+    Book book,
+  ) async {
+    // 책 저장 다이얼로그 표시
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF242424),
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(1.0),
+          ),
+          child: const Text(
+            '책 저장',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+        ),
+        content: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(1.0),
+          ),
+          child: const Text(
+            '이 책을 저장하시겠습니까?',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              '취소',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'Pretendard',
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(1.0),
+              ),
+              child: const Text(
+                '예',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Pretendard',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSave == true && context.mounted) {
+      try {
+        // 책 저장
+        final repository = ref.read(bookRepositoryProvider);
+        final userId = repository.getCurrentUserId();
+        await repository.createUserBookConnection(book.id, userId);
+
+        // 관련 provider 무효화
+        ref.invalidate(userBooksProvider);
+        ref.invalidate(recentBooksProvider);
+
+        // 책 상세 화면으로 이동
+        if (context.mounted) {
+          ref.read(selectedBookIdProvider.notifier).state = book.id;
+          context.pushNamed(
+            AppRoutes.bookDetailName,
+            pathParameters: {'id': book.id},
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ErrorHandler.showError(
+            context,
+            e,
+            operation: '책 저장',
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildBookPlaceholder() {
+    return Container(
+      width: 90, // 크기 조정 (104 -> 90)
+      height: 127, // 크기 조정 (147 -> 127)
+      color: const Color(0xFF1A1A1A),
+      child: const Icon(
+        Icons.book,
+        color: Colors.grey,
+        size: 32,
+      ),
     );
   }
 

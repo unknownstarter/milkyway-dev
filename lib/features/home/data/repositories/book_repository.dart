@@ -209,4 +209,75 @@ class BookRepository {
         .eq('user_id', userId);
   }
 
+  /// 공개된 메모가 많은 순으로 책 목록 가져오기 (최대 10개)
+  /// 
+  /// memos 테이블에서 visibility='public'인 메모를 기준으로
+  /// book_id별로 그룹화하여 개수를 세고, 많은 순으로 정렬
+  Future<List<Book>> getPopularBooksByPublicMemos() async {
+    try {
+      // 공개된 메모가 있는 책들을 book_id별로 그룹화하여 개수 세기
+      final memoCountResponse = await _client
+          .from('memos')
+          .select('book_id')
+          .eq('visibility', 'public')
+          .not('book_id', 'is', null);
+
+      // book_id별로 카운트
+      final Map<String, int> bookMemoCounts = {};
+      for (final memo in memoCountResponse) {
+        final bookId = memo['book_id'] as String?;
+        if (bookId != null) {
+          bookMemoCounts[bookId] = (bookMemoCounts[bookId] ?? 0) + 1;
+        }
+      }
+
+      // 메모 개수로 정렬 (내림차순)
+      final sortedBookIds = bookMemoCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      // 최대 10개만 가져오기
+      final topBookIds = sortedBookIds.take(10).map((e) => e.key).toList();
+
+      if (topBookIds.isEmpty) {
+        return [];
+      }
+
+      // books 테이블에서 해당 책들 가져오기
+      // Supabase에서는 여러 ID를 필터링하기 위해 or 조건 사용
+      if (topBookIds.isEmpty) {
+        return [];
+      }
+      
+      String orCondition = topBookIds
+          .map((id) => 'id.eq.$id')
+          .join(',');
+      
+      final booksResponse = await _client
+          .from('books')
+          .select()
+          .or(orCondition);
+
+      // 원래 순서 유지하기 위해 Map으로 변환
+      final booksMap = <String, Map<String, dynamic>>{};
+      for (final book in booksResponse) {
+        booksMap[book['id'] as String] = book;
+      }
+
+      // 원래 순서대로 Book 객체 생성
+      final books = topBookIds
+          .map((id) => booksMap[id])
+          .whereType<Map<String, dynamic>>()
+          .map((json) => Book.fromJson({
+                ...json,
+                'status': BookStatus.wantToRead.value, // 기본 상태
+              }))
+          .toList();
+
+      return books;
+    } catch (e) {
+      log('Error getting popular books by public memos: $e');
+      return [];
+    }
+  }
+
 }

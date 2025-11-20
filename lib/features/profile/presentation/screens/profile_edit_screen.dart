@@ -1,9 +1,10 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:io';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/providers/analytics_provider.dart';
 import '../../../../core/router/app_routes.dart';
@@ -21,11 +22,18 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   bool _isLoading = false;
   String? _selectedImagePath;
   bool _isImageRemoved = false;
+  bool _isCheckingNickname = false;
+  String? _nicknameError;
+  String? _lastCheckedNickname;
+  bool _lastCheckResult = true; // 마지막 체크 결과 (true: 사용 가능, false: 중복)
+  String? _originalNickname; // 원본 닉네임 저장 (중복 체크 시 제외)
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
     // initState에서는 ref를 사용할 수 없으므로 didChangeDependencies에서 처리
+    _nicknameController.addListener(_validateInput);
   }
 
   @override
@@ -43,6 +51,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _nicknameController.dispose();
     super.dispose();
   }
@@ -54,6 +63,125 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       // 닉네임이 변경된 경우에만 컨트롤러 업데이트 (무한 루프 방지)
       if (_nicknameController.text != user.nickname) {
         _nicknameController.text = user.nickname;
+        _originalNickname = user.nickname; // 원본 닉네임 저장
+        _lastCheckedNickname = user.nickname; // 이미 체크된 것으로 표시
+        _lastCheckResult = true; // 원본 닉네임은 항상 사용 가능
+        _nicknameError = null; // 에러 초기화
+      }
+    }
+  }
+
+  void _validateInput() {
+    // 즉시 기본 유효성 체크만 수행
+    final nickname = _nicknameController.text.trim();
+    final hasSpecialCharacters = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(nickname);
+
+    // 원본 닉네임과 동일하면 중복 체크 불필요
+    if (nickname == _originalNickname) {
+      setState(() {
+        _nicknameError = null;
+        _isCheckingNickname = false;
+        _lastCheckedNickname = nickname;
+        _lastCheckResult = true; // 원본 닉네임은 항상 사용 가능
+      });
+      return;
+    }
+
+    // 기본 유효성 체크 및 에러 메시지 설정
+    String? formatError;
+    if (nickname.isEmpty) {
+      formatError = null; // 입력 전에는 에러 메시지 표시 안 함
+    } else if (nickname.length < 2) {
+      formatError = '닉네임은 최소 2자 이상이어야 합니다';
+    } else if (nickname.length > 20) {
+      formatError = '닉네임은 최대 20자까지 입력 가능합니다';
+    } else if (hasSpecialCharacters) {
+      formatError = '특수문자는 사용할 수 없습니다';
+    }
+
+    final isValidFormat = nickname.length >= 2 &&
+        nickname.length <= 20 &&
+        !hasSpecialCharacters;
+
+    if (!isValidFormat) {
+      setState(() {
+        _nicknameError = formatError;
+        _lastCheckedNickname = null;
+        _lastCheckResult = true; // 형식 오류 시 초기화
+        _isCheckingNickname = false;
+      });
+      return;
+    }
+
+    // 형식이 유효하면 중복 체크 전에 에러 메시지 초기화
+    setState(() {
+      _nicknameError = null;
+    });
+
+    // debounce: 500ms 후에 중복 체크 수행
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _checkNicknameAvailability(nickname);
+    });
+  }
+
+  Future<void> _checkNicknameAvailability(String nickname) async {
+    // 원본 닉네임과 동일하면 중복 체크 불필요
+    if (nickname == _originalNickname) {
+      setState(() {
+        _nicknameError = null;
+        _isCheckingNickname = false;
+        _lastCheckedNickname = nickname;
+        _lastCheckResult = true; // 원본 닉네임은 항상 사용 가능
+      });
+      return;
+    }
+
+    // 동일한 닉네임을 이미 체크했다면 이전 결과 사용
+    if (_lastCheckedNickname == nickname) {
+      setState(() {
+        _isCheckingNickname = false;
+        if (!_lastCheckResult) {
+          _nicknameError = '이미 사용 중인 닉네임입니다';
+        } else {
+          _nicknameError = null;
+        }
+      });
+      return;
+    }
+
+    // 닉네임 중복 체크
+    setState(() {
+      _isCheckingNickname = true;
+      _nicknameError = null;
+    });
+
+    try {
+      final isAvailable = await ref
+          .read(authProvider.notifier)
+          .checkNicknameAvailability(nickname);
+
+      if (mounted) {
+        setState(() {
+          _isCheckingNickname = false;
+          _lastCheckedNickname = nickname;
+          _lastCheckResult = isAvailable; // 체크 결과 저장
+          if (!isAvailable) {
+            _nicknameError = '이미 사용 중인 닉네임입니다';
+          } else {
+            _nicknameError = null;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCheckingNickname = false;
+          _lastCheckResult = false; // 에러 발생 시 안전하게 false로 설정
+          _nicknameError = '닉네임 확인 중 오류가 발생했습니다';
+        });
+        // 에러 핸들러로도 표시
+        ErrorHandler.showError(context, e, operation: '닉네임 중복 체크');
       }
     }
   }
@@ -66,12 +194,15 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       backgroundColor: const Color(0xFF181818),
       appBar: AppBar(
         backgroundColor: const Color(0xFF181818),
-        title: const Text(
-          '프로필 수정',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            '프로필 수정',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         leading: IconButton(
@@ -80,11 +211,15 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: _isLoading ? null : _saveProfile,
+            onPressed: (_isLoading || _isCheckingNickname || _nicknameError != null) 
+                ? null 
+                : _saveProfile,
             child: Text(
               '저장',
               style: TextStyle(
-                color: _isLoading ? Colors.grey : Colors.white,
+                color: (_isLoading || _isCheckingNickname || _nicknameError != null) 
+                    ? Colors.grey 
+                    : Colors.white,
                 fontFamily: 'Pretendard',
                 fontWeight: FontWeight.bold,
               ),
@@ -217,25 +352,94 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         TextField(
           controller: _nicknameController,
           cursorColor: Colors.white,
-          style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Pretendard',
+            fontSize: 16,
+            height: 22.4 / 16,
+          ),
           decoration: InputDecoration(
             hintText: '닉네임을 입력하세요',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Pretendard'),
+            hintStyle: const TextStyle(
+              color: Color(0xFF838383),
+              fontFamily: 'Pretendard',
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              height: 22.4 / 16,
+            ),
             filled: true,
             fillColor: const Color(0xFF1A1A1A),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 20,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade800),
+              borderSide: const BorderSide(color: Color(0xFF646464)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade800),
+              borderSide: const BorderSide(color: Color(0xFF646464)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.white),
+              borderSide: const BorderSide(color: Color(0xFF646464)),
             ),
           ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            if (_isCheckingNickname) ...[
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF838383),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Text(
+                '확인 중...',
+                style: TextStyle(
+                  color: Color(0xFF838383),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  fontFamily: 'Pretendard',
+                  height: 16.8 / 12,
+                ),
+              ),
+            ] else if (_nicknameError != null) ...[
+              const Icon(
+                Icons.error_outline,
+                size: 12,
+                color: Colors.red,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _nicknameError!,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  fontFamily: 'Pretendard',
+                  height: 16.8 / 12,
+                ),
+              ),
+            ] else ...[
+              const Text(
+                '2 - 20자, 특수문자 사용 불가',
+                style: TextStyle(
+                  color: Color(0xFF838383),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  fontFamily: 'Pretendard',
+                  height: 16.8 / 12,
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );
@@ -322,7 +526,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('이미지 선택 중 오류가 발생했습니다: $e'),
+            content: Text(
+              '이미지 선택 중 오류가 발생했습니다: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: const Color(0xFF242424),
           ),
         );
@@ -493,12 +700,48 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (_nicknameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('닉네임을 입력해주세요'),
-          backgroundColor: Color(0xFF242424),
-        ),
+    final nickname = _nicknameController.text.trim();
+    
+    // 유효성 검사
+    if (nickname.isEmpty) {
+      ErrorHandler.showSuccess(
+        context,
+        '닉네임을 입력해주세요',
+      );
+      return;
+    }
+
+    // 원본 닉네임과 다르면 중복 체크가 완료되었는지 확인
+    if (nickname != _originalNickname) {
+      // 중복 체크 중이면 저장 불가
+      if (_isCheckingNickname) {
+        ErrorHandler.showSuccess(
+          context,
+          '닉네임 확인 중입니다. 잠시만 기다려주세요.',
+        );
+        return;
+      }
+
+      // 아직 체크하지 않은 닉네임이면 체크 수행
+      if (_lastCheckedNickname != nickname) {
+        await _checkNicknameAvailability(nickname);
+        // 체크 후에도 에러가 있으면 저장 불가
+        if (_nicknameError != null) {
+          return;
+        }
+      } else if (_nicknameError != null) {
+        // 이미 체크했는데 에러가 있으면 저장 불가
+        return;
+      }
+    }
+
+    // 원본 닉네임과 동일하고 이미지도 변경되지 않았으면 저장 불필요
+    if (nickname == _originalNickname && 
+        _selectedImagePath == null && 
+        !_isImageRemoved) {
+      ErrorHandler.showSuccess(
+        context,
+        '변경된 내용이 없습니다',
       );
       return;
     }
@@ -529,17 +772,18 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       // _selectedImagePath가 null이고 _isImageRemoved가 false면 기존 이미지 유지 (uploadedImageUrl = null)
 
       await ref.read(authProvider.notifier).updateProfile(
-        nickname: _nicknameController.text.trim(),
+        nickname: nickname,
         pictureUrl: uploadedImageUrl,
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('프로필이 수정되었습니다'),
-            backgroundColor: Color(0xFF242424),
-          ),
+        ErrorHandler.showSuccess(
+          context,
+          '프로필이 수정되었습니다',
         );
+        // 원본 닉네임 업데이트
+        _originalNickname = nickname;
+        _lastCheckedNickname = nickname;
         context.pop();
       }
     } catch (e) {

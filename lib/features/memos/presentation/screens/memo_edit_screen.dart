@@ -143,14 +143,17 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
                   }
                 },
         ),
-        title: const Text(
-          '메모 편집',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-            height: 28 / 20,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            '메모 편집',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              height: 28 / 20,
+            ),
           ),
         ),
         centerTitle: true,
@@ -246,7 +249,7 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
     
     return Container(
       width: double.infinity,
-      height: 41,
+      height: 50,
       decoration: BoxDecoration(
         color: isEnabled ? const Color(0xFFDEDEDE) : const Color(0xFF838383),
         borderRadius: BorderRadius.circular(20),
@@ -379,7 +382,10 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('메모가 수정되었습니다'),
+            content: Text(
+              '메모가 수정되었습니다',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: Color(0xFF242424),
           ),
         );
@@ -419,7 +425,10 @@ class _MemoEditScreenState extends ConsumerState<MemoEditScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+              child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            ),
           ),
         ],
       ),

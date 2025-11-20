@@ -28,6 +28,7 @@ class MemoListView extends ConsumerStatefulWidget {
 
 class _MemoListViewState extends ConsumerState<MemoListView> {
   MemoFilter _selectedFilter = MemoFilter.myMemos;
+  DateTime? _lastScrollTime; // 스크롤 throttle을 위한 마지막 스크롤 시간
   
   // 필터링 결과 메모이제이션
   List<Memo>? _cachedFilteredMemos;
@@ -37,12 +38,46 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
 
   @override
   Widget build(BuildContext context) {
-    // bookId가 필수이므로 bookMemosProvider 사용
-    final memosAsyncValue = ref.watch(bookMemosProvider(widget.bookId));
-    
     final currentUserId = ref.watch(authProvider).value?.id;
+    
+    // 필터에 따라 다른 provider 사용
+    // "내가 쓴": 현재 사용자의 메모만
+    // "모든 메모": 해당 책의 모든 공개 메모 (다른 유저의 것도 포함, 페이지네이션 지원)
+    final memosAsyncValue = _selectedFilter == MemoFilter.myMemos
+        ? ref.watch(bookMemosProvider(widget.bookId))
+        : ref.watch(paginatedPublicBookMemosProvider(widget.bookId));
 
-    return LayoutBuilder(
+    // "모든 메모" 필터의 경우 페이지네이션 상태 확인
+    final paginatedNotifier = _selectedFilter == MemoFilter.all
+        ? ref.read(paginatedPublicBookMemosProvider(widget.bookId).notifier)
+        : null;
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // 스크롤이 하단에 가까워지면 더 많은 메모 로드
+        if (notification is ScrollUpdateNotification) {
+          final metrics = notification.metrics;
+          
+          // Throttle: 마지막 스크롤로부터 300ms 이내면 무시
+          final now = DateTime.now();
+          if (_lastScrollTime != null &&
+              now.difference(_lastScrollTime!).inMilliseconds < 300) {
+            return false;
+          }
+          
+          if (metrics.pixels >= metrics.maxScrollExtent - 200) {
+            if (_selectedFilter == MemoFilter.all &&
+                paginatedNotifier != null &&
+                paginatedNotifier.hasMore &&
+                !paginatedNotifier.isLoading) {
+              _lastScrollTime = now;
+              paginatedNotifier.loadMoreMemos();
+            }
+          }
+        }
+        return false;
+      },
+      child: LayoutBuilder(
       builder: (context, constraints) {
         // 반응형: 화면 너비에서 양쪽 20px씩 제외한 카드 너비
         final cardWidth = constraints.maxWidth - 40;
@@ -50,7 +85,10 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
         return memosAsyncValue.when(
           data: (memos) {
             // 필터링된 메모 (메모이제이션 적용)
-            final filteredMemos = _getFilteredMemos(memos, currentUserId);
+            // "모든 메모" 필터의 경우 이미 공개 메모만 가져왔으므로 추가 필터링 불필요
+            final filteredMemos = _selectedFilter == MemoFilter.all
+                ? memos // 이미 공개 메모만 가져왔으므로 그대로 사용
+                : _getFilteredMemos(memos, currentUserId);
 
             return Column(
               mainAxisSize: MainAxisSize.min,
@@ -64,6 +102,8 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
                 if (filteredMemos.isEmpty)
                   _buildEmptyMemos()
                 else
+                  // Column으로 변경하여 오버플로우 방지
+                  // ListView.builder는 itemExtent 고정으로 인한 오버플로우 발생
                   Padding(
                     padding: const EdgeInsets.only(
                       left: 20,
@@ -72,12 +112,17 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: filteredMemos
-                          .map((memo) => BookDetailMemoCard(
-                                memo: memo,
-                                cardWidth: cardWidth,
-                              ))
-                          .toList(),
+                      children: [
+                        ...filteredMemos
+                            .map((memo) => BookDetailMemoCard(
+                                  memo: memo,
+                                  cardWidth: cardWidth,
+                                ))
+                            .toList(),
+                        // 페이지네이션 로딩 인디케이터
+                        if (_selectedFilter == MemoFilter.all)
+                          _buildPaginationLoader(),
+                      ],
                     ),
                   ),
               ],
@@ -103,6 +148,7 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
           ),
         );
       },
+      ),
     );
   }
 
@@ -138,6 +184,34 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
       _cachedMemosLength = null;
       _cachedUserId = null;
     });
+    // 필터 변경 시 provider 무효화하여 새로운 데이터 가져오기
+    if (filter == MemoFilter.myMemos) {
+      ref.invalidate(bookMemosProvider(widget.bookId));
+    } else {
+      // 페이지네이션 provider 초기화
+      ref.read(paginatedPublicBookMemosProvider(widget.bookId).notifier)
+          .loadInitialMemos();
+    }
+  }
+
+  Widget _buildPaginationLoader() {
+    final notifier = ref.read(
+      paginatedPublicBookMemosProvider(widget.bookId).notifier,
+    );
+    
+    // 로딩 중이고 더 불러올 데이터가 있을 때만 표시
+    if (!notifier.hasMore || !notifier.isLoading) {
+      return const SizedBox.shrink();
+    }
+
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFECECEC),
+        ),
+      ),
+    );
   }
 
   Widget _buildMemoFilter() {

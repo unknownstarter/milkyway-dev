@@ -35,14 +35,17 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
       backgroundColor: const Color(0xFF181818),
       appBar: AppBar(
         backgroundColor: const Color(0xFF181818),
-        title: const Text(
-          '프로필 사진',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-            height: 28 / 20,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            '프로필 사진',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              height: 28 / 20,
+            ),
           ),
         ),
         centerTitle: true,
@@ -234,7 +237,7 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
     
     return Container(
       width: double.infinity,
-      height: 41,
+      height: 50,
       decoration: BoxDecoration(
         color: isEnabled ? const Color(0xFFDEDEDE) : const Color(0xFF838383),
         borderRadius: BorderRadius.circular(20),
@@ -250,14 +253,17 @@ class _ProfileImageScreenState extends ConsumerState<ProfileImageScreen> {
                     color: Color(0xFFECECEC),
                     strokeWidth: 2,
                   )
-                : Text(
-                    '다음',
-                    style: TextStyle(
-                      color: isEnabled ? Colors.black : Colors.white,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      height: 24 / 16,
+                : MediaQuery(
+                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                    child: Text(
+                      '다음',
+                      style: TextStyle(
+                        color: isEnabled ? Colors.black : Colors.white,
+                        fontFamily: 'Pretendard',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        height: 24 / 16,
+                      ),
                     ),
                   ),
           ),

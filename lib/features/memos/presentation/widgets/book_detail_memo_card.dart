@@ -35,14 +35,14 @@ class BookDetailMemoCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: hasImage
-            ? _buildMemoCardWithImage(memo)
-            : _buildMemoCardTextOnly(memo),
+            ? _buildMemoCardWithImage(context, memo)
+            : _buildMemoCardTextOnly(context, memo),
       ),
     );
   }
 
   /// 텍스트만 있는 메모 카드
-  Widget _buildMemoCardTextOnly(Memo memo) {
+  Widget _buildMemoCardTextOnly(BuildContext context, Memo memo) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.zero, // 피그마: 메모 카드에 padding 없음
@@ -65,14 +65,14 @@ class BookDetailMemoCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // 책 제목 및 페이지
-          _buildBookInfo(memo),
+          _buildBookInfo(context, memo),
         ],
       ),
     );
   }
 
   /// 이미지가 있는 메모 카드
-  Widget _buildMemoCardWithImage(Memo memo) {
+  Widget _buildMemoCardWithImage(BuildContext context, Memo memo) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.zero, // 피그마: 메모 카드에 padding 없음
@@ -133,7 +133,7 @@ class BookDetailMemoCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // 책 제목 및 페이지
-          _buildBookInfo(memo),
+          _buildBookInfo(context, memo),
         ],
       ),
     );
@@ -197,22 +197,25 @@ class BookDetailMemoCard extends StatelessWidget {
   }
 
   /// 책 제목 및 페이지 정보 위젯
-  Widget _buildBookInfo(Memo memo) {
+  Widget _buildBookInfo(BuildContext context, Memo memo) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          child: Text(
-            memo.bookTitle,
-            style: const TextStyle(
-              color: Color(0xFF838383),
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w300,
-              fontSize: 16,
-              height: 24 / 16,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+            child: Text(
+              memo.bookTitle,
+              style: const TextStyle(
+                color: Color(0xFF838383),
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.w300,
+                fontSize: 16,
+                height: 24 / 16,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
         if (memo.page != null)

@@ -91,7 +91,10 @@ class _MemoDetailScreenState extends ConsumerState<MemoDetailScreen> {
 
     return StarBackgroundScaffold(
       appBar: AppBar(
-        title: const Text('메모'),
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text('메모'),
+        ),
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -443,7 +446,10 @@ class _MemoDetailScreenState extends ConsumerState<MemoDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+              child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            ),
           ),
         ],
       ),

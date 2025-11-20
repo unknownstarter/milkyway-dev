@@ -3,12 +3,82 @@
 ## 📋 버전 관리
 
 **현재 버전:** 1.0.0-dev  
-**최종 업데이트:** 2025-11-20  
+**최종 업데이트:** 2025-11-21  
 **개발 상태:** 개발 중
 
 ---
 
-## 🚀 [1.0.0-dev] - 2025-11-19
+## 🚀 [1.0.0-dev] - 2025-11-21
+
+### 🚀 공개 메모 페이지네이션 및 성능 최적화 (2025-11-21)
+
+#### 📊 공개 메모 프로필 정보 표시 문제 해결
+- **RLS 정책 우회를 위한 Edge Function 구현** - 책 상세 화면의 "모든 메모" 필터에서 다른 유저의 프로필 정보가 표시되지 않는 문제 해결
+  - `get-public-book-memos` Edge Function 생성 및 배포
+  - Service Role Key를 사용하여 RLS 정책 우회
+  - 다른 유저의 `nickname`과 `picture_url` 정상 조회 및 표시
+- **페이지네이션 구현** - 서버 사이드 페이지네이션으로 대량 데이터 처리 최적화
+  - 10개씩 페이지네이션으로 로딩
+  - `PaginatedPublicBookMemosNotifier`로 즉시 로딩 시작
+  - 스크롤 시 자동으로 다음 페이지 로드
+  - `hasMore` 플래그로 더 불러올 데이터 여부 확인
+
+#### ⚡ 성능 최적화
+- **중복 요청 방지** - `isLoading` 플래그로 동시 요청 방지
+- **스크롤 최적화** - 300ms throttle로 스크롤 이벤트 처리 부하 감소
+- **Edge Function 최적화** - `count` 계산을 첫 페이지에서만 수행하여 DB 쿼리 비용 감소
+- **재시도 로직** - 네트워크 에러 시 exponential backoff로 자동 재시도 (최대 2회, 500ms 초기 지연)
+- **응답 캐싱** - 첫 페이지(offset=0)만 2분간 캐싱하여 재방문 시 즉시 로딩
+- **선택적 캐시 무효화** - 메모 생성/수정/삭제 시 특정 `bookId`만 무효화하여 효율성 향상
+- **첫 페이지 로딩 최적화** - 첫 페이지는 재시도 없이 즉시 호출, 네트워크 에러만 재시도
+
+#### 🐛 오버플로우 에러 수정
+- **ListView.builder itemExtent 제거** - 고정 높이로 인한 오버플로우 문제 해결
+  - `Column`으로 변경하여 실제 높이에 맞게 자동 계산
+  - 이미지가 있는 메모 카드도 정상적으로 표시
+
+#### 🎨 UI 개선
+- **Home 빈 상태 레이아웃 조정** - 저장한 책이 없을 때 레이아웃 개선
+  - "000님의 인생 책을 찾아주세요" 영역 하단으로 이동 (32px → 60px)
+  - "지금 밀키웨이에서 많이 읽고 있는 책" 영역 하단으로 이동 (40px → 60px)
+
+#### 📝 수정된 파일
+- `supabase/functions/get-public-book-memos/index.ts` - 새 Edge Function 생성 (페이지네이션 지원)
+- `lib/features/memos/data/repositories/memo_repository.dart` - 페이지네이션 메서드 추가, 재시도 로직, 캐싱 적용
+- `lib/features/memos/presentation/providers/memo_provider.dart` - `PaginatedPublicBookMemosNotifier` 추가, 캐시 무효화
+- `lib/features/memos/presentation/widgets/memo_list_view.dart` - 페이지네이션 스크롤 감지, 오버플로우 수정
+- `lib/core/utils/retry_helper.dart` - 재시도 로직 유틸리티 생성
+- `lib/core/utils/response_cache.dart` - 응답 캐싱 유틸리티 생성
+- `lib/features/home/presentation/widgets/home_empty_states.dart` - 레이아웃 간격 조정
+
+### 🔧 닉네임 중복 체크 및 스낵바 위치 개선 (2025-11-20)
+
+#### 🛡️ 닉네임 중복 체크 개선
+- **RLS 정책 우회를 위한 Edge Function 구현** - Supabase RLS 정책으로 인해 다른 사용자의 닉네임을 직접 조회할 수 없는 문제 해결
+  - `check-nickname` Edge Function 생성 및 배포
+  - Service Role Key를 사용하여 모든 사용자의 닉네임 조회 가능
+  - 현재 사용자의 닉네임과 동일하면 사용 가능 처리
+- **프로필 수정 화면 유효성 검사 개선** - 온보딩 화면과 동일한 유효성 검사 로직 적용
+  - 실시간 기본 유효성 검사 (2-20자, 특수문자 체크)
+  - debounce 500ms 후 중복 체크 수행
+  - "확인 중...", 에러 메시지, 기본 안내 텍스트 표시
+  - 저장 버튼 활성화/비활성화 로직 개선
+- **온보딩 화면과 프로필 수정 화면 일관성** - 두 화면 모두 동일한 유효성 검사 및 에러 메시지 사용
+
+#### 📱 스낵바 위치 개선
+- **모든 스크린에서 최하단 표시** - 하단 네비게이션 바가 있는 화면과 없는 화면 모두에서 일관된 위치에 표시
+  - `ErrorHandler._calculateBottomNavigationBarHeight()` 개선
+  - 하단 네비게이션 바가 없는 화면에서도 SafeArea bottom 고려
+  - `elevation: 1000` 설정으로 최상위 레이어에 표시
+- **성공 메시지 스낵바 추가** - `ErrorHandler.showSuccess()` 메서드 추가
+  - 에러 메시지와 동일한 스타일 및 위치 적용
+
+#### 📝 수정된 파일
+- `supabase/functions/check-nickname/index.ts` - 새 Edge Function 생성
+- `lib/features/auth/presentation/providers/auth_provider.dart` - Edge Function 호출로 변경
+- `lib/features/profile/presentation/screens/profile_edit_screen.dart` - 유효성 검사 로직 추가
+- `lib/core/utils/error_handler.dart` - 스낵바 위치 계산 개선, `showSuccess()` 추가
+- `lib/features/memos/utils/memo_error_handler.dart` - 스낵바 위치 계산 개선
 
 ### 🎨 UI/UX 개선 및 배포 준비 (2025-11-20)
 

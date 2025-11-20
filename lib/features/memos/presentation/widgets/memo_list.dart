@@ -30,6 +30,7 @@ class _MemoListState extends ConsumerState<MemoList> {
   int? _cachedMemosLength;
   String? _cachedUserId;
   Set<String>? _cachedMemoIds; // 메모 ID 집합으로 실제 변경 여부 확인
+  String? _cachedMemoVisibilityHash; // 메모 visibility 해시 (visibility 변경 감지용)
 
   @override
   void initState() {
@@ -55,16 +56,25 @@ class _MemoListState extends ConsumerState<MemoList> {
 
   /// 필터링된 메모 반환 (메모이제이션 적용)
   List<Memo> _getFilteredMemos(List<Memo> memos, String? currentUserId) {
-    // 캐시가 유효한지 확인 (리스트 길이와 ID 집합으로 비교)
+    // 메모 ID와 visibility 해시 계산 (visibility 변경 감지용)
+    final currentMemoIds = memos.map((m) => m.id).toSet();
+    final currentMemoVisibilityHash = memos
+        .map((m) => '${m.id}:${m.visibility.value}')
+        .toList()
+      ..sort();
+    final visibilityHashString = currentMemoVisibilityHash.join(',');
+
+    // 캐시가 유효한지 확인 (리스트 길이, ID 집합, visibility 해시로 비교)
     if (_cachedFilteredMemos != null &&
         _cachedFilter == _selectedFilter &&
         _cachedMemosLength == memos.length &&
         _cachedUserId == currentUserId &&
-        _cachedMemoIds != null) {
-      // 메모 ID 집합으로 실제 변경 여부 확인
-      final currentMemoIds = memos.map((m) => m.id).toSet();
-      if (_cachedMemoIds == currentMemoIds) {
-      return _cachedFilteredMemos!;
+        _cachedMemoIds != null &&
+        _cachedMemoVisibilityHash != null) {
+      // 메모 ID 집합과 visibility 해시로 실제 변경 여부 확인
+      if (_cachedMemoIds == currentMemoIds &&
+          _cachedMemoVisibilityHash == visibilityHashString) {
+        return _cachedFilteredMemos!;
       }
     }
 
@@ -76,7 +86,8 @@ class _MemoListState extends ConsumerState<MemoList> {
     _cachedFilter = _selectedFilter;
     _cachedMemosLength = memos.length;
     _cachedUserId = currentUserId;
-    _cachedMemoIds = memos.map((m) => m.id).toSet();
+    _cachedMemoIds = currentMemoIds;
+    _cachedMemoVisibilityHash = visibilityHashString;
 
     return filtered;
   }
@@ -91,6 +102,7 @@ class _MemoListState extends ConsumerState<MemoList> {
       _cachedMemosLength = null;
       _cachedUserId = null;
       _cachedMemoIds = null;
+      _cachedMemoVisibilityHash = null;
     });
   }
 

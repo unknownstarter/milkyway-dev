@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../widgets/book_grid_item.dart';
 import '../../../books/presentation/providers/user_books_provider.dart';
-import '../../../../core/presentation/widgets/empty_book_card.dart';
 import '../../../../core/presentation/widgets/add_floating_action_button.dart';
 import '../../../../core/presentation/widgets/pill_filter_button.dart';
 import '../../../home/domain/models/book.dart';
@@ -96,14 +95,17 @@ class _BookShelfScreenState extends ConsumerState<BookShelfScreen> {
         backgroundColor: const Color(0xFF181818),
         surfaceTintColor: Colors.transparent, // Material 3에서 스크롤 시 색상 변경 방지
         elevation: 0,
-        title: const Text(
-          'Books',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-            height: 28 / 20,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            'Books',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              height: 28 / 20,
+            ),
           ),
         ),
         centerTitle: true,
@@ -125,12 +127,38 @@ class _BookShelfScreenState extends ConsumerState<BookShelfScreen> {
             return Column(
               children: [
                 _buildFilterButtons(),
-                const Expanded(
+                Expanded(
                   child: Center(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 200),
-                child: EmptyBookCard(),
-              ),
+                    child: GestureDetector(
+                      onTap: () {
+                        context.pushNamed(AppRoutes.bookSearchName);
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.note_add,
+                            color: Colors.grey,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 16),
+                          MediaQuery(
+                            data: MediaQuery.of(context).copyWith(
+                              textScaler: TextScaler.linear(1.0),
+                            ),
+                            child: const Text(
+                              '새로운 책을 추가해주세요',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Pretendard',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -16,14 +16,17 @@ class MemoListScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFF181818),
         surfaceTintColor: Colors.transparent, // Material 3에서 스크롤 시 색상 변경 방지
         elevation: 0,
-        title: const Text(
-          'My Memo',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-            height: 28 / 20,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            'My Memo',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              height: 28 / 20,
+            ),
           ),
         ),
         centerTitle: true,

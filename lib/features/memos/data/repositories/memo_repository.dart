@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/memo.dart';
 import '../../domain/models/memo_visibility.dart';
 import 'dart:developer';
+import '../../../../core/utils/retry_helper.dart';
+import '../../../../core/utils/response_cache.dart';
 
 class MemoRepository {
   final SupabaseClient _client;
@@ -50,6 +52,172 @@ class MemoRepository {
         .order('created_at', ascending: false);
 
     return response.map((json) => Memo.fromJson(json)).toList();
+  }
+
+  /// 해당 책의 모든 공개 메모 가져오기 (다른 유저의 공개 메모 포함)
+  /// RLS 정책으로 인해 users 조인 시 다른 유저 정보를 가져올 수 없으므로 Edge Function 사용
+  /// @deprecated 페이지네이션을 위해 getPaginatedPublicBookMemos 사용 권장
+  Future<List<Memo>> getPublicBookMemos(String bookId) async {
+    try {
+      final response = await _client.functions.invoke(
+        'get-public-book-memos',
+        body: {'book_id': bookId},
+      );
+
+      if (response.status != 200) {
+        final errorData = response.data;
+        log('공개 메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+        return [];
+      }
+
+      final result = response.data as Map<String, dynamic>;
+      final memosData = result['memos'] as List<dynamic>?;
+
+      if (memosData == null) {
+        return [];
+      }
+
+      return memosData
+          .map((json) => Memo.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      log('공개 메모 조회 중 오류 발생: $e');
+      return [];
+    }
+  }
+
+  /// 해당 책의 공개 메모를 페이지네이션으로 가져오기 (다른 유저의 공개 메모 포함)
+  /// RLS 정책으로 인해 users 조인 시 다른 유저 정보를 가져올 수 없으므로 Edge Function 사용
+  /// 네트워크 에러 시 자동 재시도 (exponential backoff)
+  /// 응답 캐싱으로 동일한 요청 시 네트워크 호출 감소
+  Future<List<Memo>> getPaginatedPublicBookMemos({
+    required String bookId,
+    required int limit,
+    required int offset,
+  }) async {
+    final cache = ResponseCache();
+    final requestBody = {
+      'book_id': bookId,
+      'limit': limit,
+      'offset': offset,
+    };
+
+    // 캐시에서 먼저 확인 (offset이 0이 아닌 경우는 캐시하지 않음 - 실시간성 중요)
+    if (offset == 0) {
+      final cached = cache.get<Map<String, dynamic>>(
+        'get-public-book-memos',
+        requestBody,
+      );
+      
+      if (cached != null) {
+        final memosData = cached['memos'] as List<dynamic>?;
+        if (memosData != null) {
+          log('캐시에서 공개 메모 조회: $bookId');
+          return memosData
+              .map((json) => Memo.fromJson(json as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    }
+
+    // 첫 페이지는 재시도 없이 빠르게 실패 처리 (사용자 경험 개선)
+    // 다음 페이지는 재시도 적용
+    if (offset == 0) {
+      try {
+        final response = await _client.functions.invoke(
+          'get-public-book-memos',
+          body: requestBody,
+        );
+
+        if (response.status != 200) {
+          final errorData = response.data;
+          log('공개 메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+          throw Exception('공개 메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+        }
+
+        final result = response.data as Map<String, dynamic>;
+        final memosData = result['memos'] as List<dynamic>?;
+
+        if (memosData == null) {
+          return [];
+        }
+
+        final memos = memosData
+            .map((json) => Memo.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        // 첫 페이지 캐싱
+        cache.set(
+          'get-public-book-memos',
+          requestBody,
+          result,
+          ttl: const Duration(minutes: 2),
+        );
+
+        return memos;
+      } catch (e) {
+        // 네트워크 에러만 재시도
+        if (RetryHelper.isNetworkError(e)) {
+          return await RetryHelper.retryWithBackoff<List<Memo>>(
+            operation: () async {
+              final response = await _client.functions.invoke(
+                'get-public-book-memos',
+                body: requestBody,
+              );
+
+              if (response.status != 200) {
+                final errorData = response.data;
+                log('공개 메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+                throw Exception('공개 메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+              }
+
+              final result = response.data as Map<String, dynamic>;
+              final memosData = result['memos'] as List<dynamic>?;
+
+              if (memosData == null) {
+                return [];
+              }
+
+              return memosData
+                  .map((json) => Memo.fromJson(json as Map<String, dynamic>))
+                  .toList();
+            },
+            maxRetries: 2, // 재시도 횟수 감소
+            initialDelay: const Duration(milliseconds: 500), // 초기 지연 시간 감소
+          );
+        }
+        rethrow;
+      }
+    } else {
+      // 다음 페이지는 재시도 적용
+      return await RetryHelper.retryWithBackoff<List<Memo>>(
+        operation: () async {
+          final response = await _client.functions.invoke(
+            'get-public-book-memos',
+            body: requestBody,
+          );
+
+          if (response.status != 200) {
+            final errorData = response.data;
+            log('공개 메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+            throw Exception('공개 메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+          }
+
+          final result = response.data as Map<String, dynamic>;
+          final memosData = result['memos'] as List<dynamic>?;
+
+          if (memosData == null) {
+            return [];
+          }
+
+          return memosData
+              .map((json) => Memo.fromJson(json as Map<String, dynamic>))
+              .toList();
+        },
+        maxRetries: 2,
+        initialDelay: const Duration(milliseconds: 500),
+      );
+    }
   }
 
   Future<void> createMemo({

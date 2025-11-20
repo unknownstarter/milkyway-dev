@@ -69,12 +69,15 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
       backgroundColor: const Color(0xFF181818),
       appBar: AppBar(
         backgroundColor: const Color(0xFF181818),
-        title: const Text(
-          '책 검색',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            '책 검색',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         leading: IconButton(
@@ -351,7 +354,10 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('이미 등록된 책입니다'),
+                content: Text(
+                  '이미 등록된 책입니다',
+                  style: TextStyle(color: Colors.white),
+                ),
                 backgroundColor: Color(0xFF242424),
               ),
             );
@@ -377,7 +383,10 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('책이 등록되었습니다'),
+            content: Text(
+              '책이 등록되었습니다',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: Color(0xFF242424),
           ),
         );
@@ -405,7 +414,10 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
         if (book != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('새 책이 등록되었습니다'),
+              content: Text(
+                '새 책이 등록되었습니다',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: Color(0xFF242424),
             ),
           );
@@ -421,7 +433,10 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('책 등록에 실패했습니다'),
+              content: Text(
+                '책 등록에 실패했습니다',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: Color(0xFF242424),
             ),
           );

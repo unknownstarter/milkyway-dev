@@ -65,14 +65,17 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
             }
           },
         ),
-        title: const Text(
-          '책 상세페이지',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-            height: 28 / 20,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            '책 상세페이지',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              height: 28 / 20,
+            ),
           ),
         ),
         centerTitle: true,
@@ -80,13 +83,16 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
           bookAsync.when(
             data: (book) => TextButton(
               onPressed: () => _deleteBook(book),
-              child: const Text(
-                '삭제',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontFamily: 'Pretendard',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              child: MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                child: const Text(
+                  '삭제',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Pretendard',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -200,75 +206,90 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 책 제목 (피그마: 최대 84px, 3줄)
-                SizedBox(
-                  height: 84, // 피그마: 책 제목 최대 높이 84px (3줄 × 28px lineHeight)
-                  child: Text(
-                    book.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 20,
-                      height: 28 / 20,
+                // MediaQuery로 텍스트 스케일을 제한하여 디바이스 글자 크기 설정과 무관하게 일정한 크기 유지
+                MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    textScaler: TextScaler.linear(1.0), // 텍스트 스케일을 1.0으로 고정
+                  ),
+                  child: SizedBox(
+                    height: 84, // 피그마: 책 제목 최대 높이 84px (3줄 × 28px lineHeight)
+                    child: Text(
+                      book.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Pretendard',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 20,
+                        height: 28 / 20,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 // 피그마: 책 제목 끝(2871) ~ Frame 25 시작(2895) = 24px
                 const SizedBox(height: 24),
-                // 저자
-                Text(
-                  book.author,
-                  style: const TextStyle(
-                    color: Color(0xFFDADADA),
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w400,
-                    fontSize: 12,
-                    height: 16.8 / 12,
+                // 저자 및 출판사 정보 (텍스트 스케일 고정)
+                MediaQuery(
+                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 저자
+                      Text(
+                        book.author,
+                        style: const TextStyle(
+                          color: Color(0xFFDADADA),
+                          fontFamily: 'Pretendard',
+                          fontWeight: FontWeight.w400,
+                          fontSize: 12,
+                          height: 16.8 / 12,
+                        ),
+                      ),
+                      // 피그마: 저자(2895, height: 17) ~ 출판사(2917) = 22px
+                      // 하지만 저자 끝(2912) ~ 출판사(2917) = 5px
+                      // 실제로는 더 작은 간격이 필요할 수 있음
+                      const SizedBox(height: 2),
+                      // 출판사 및 출판일
+                      Row(
+                        children: [
+                          if (book.publisher != null && book.publisher!.isNotEmpty)
+                            Text(
+                              book.publisher!,
+                              style: const TextStyle(
+                                color: Color(0xFFDADADA),
+                                fontFamily: 'Pretendard',
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12,
+                                height: 16.8 / 12,
+                              ),
+                            ),
+                          if (book.publisher != null &&
+                              book.publisher!.isNotEmpty &&
+                              book.pubdate != null &&
+                              book.pubdate!.isNotEmpty)
+                            const Text(
+                              ' · ',
+                              style: TextStyle(
+                                color: Color(0xFFDADADA),
+                                fontSize: 12,
+                              ),
+                            ),
+                          if (book.pubdate != null && book.pubdate!.isNotEmpty)
+                            Text(
+                              book.pubdate!,
+                              style: const TextStyle(
+                                color: Color(0xFFDADADA),
+                                fontFamily: 'Pretendard',
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12,
+                                height: 16.8 / 12,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-                // 피그마: 저자(2895, height: 17) ~ 출판사(2917) = 22px
-                // 하지만 저자 끝(2912) ~ 출판사(2917) = 5px
-                // 실제로는 더 작은 간격이 필요할 수 있음
-                const SizedBox(height: 2),
-                // 출판사 및 출판일
-                Row(
-                  children: [
-                    if (book.publisher != null && book.publisher!.isNotEmpty)
-                      Text(
-                        book.publisher!,
-                        style: const TextStyle(
-                          color: Color(0xFFDADADA),
-                          fontFamily: 'Pretendard',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
-                          height: 16.8 / 12,
-                        ),
-                      ),
-                    if (book.publisher != null &&
-                        book.publisher!.isNotEmpty &&
-                        book.pubdate != null &&
-                        book.pubdate!.isNotEmpty)
-                      const Text(
-                        ' · ',
-                        style: TextStyle(
-                          color: Color(0xFFDADADA),
-                          fontSize: 12,
-                        ),
-                      ),
-                    if (book.pubdate != null && book.pubdate!.isNotEmpty)
-                      Text(
-                        book.pubdate!,
-                        style: const TextStyle(
-                          color: Color(0xFFDADADA),
-                          fontFamily: 'Pretendard',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
-                          height: 16.8 / 12,
-                        ),
-                      ),
-                  ],
                 ),
               ],
             ),
@@ -388,14 +409,17 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '책 소개',
-            style: TextStyle(
-              color: Colors.white,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-              height: 28 / 20,
+          MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+            child: const Text(
+              '책 소개',
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.w600,
+                fontSize: 20,
+                height: 28 / 20,
+              ),
             ),
           ),
           const SizedBox(
@@ -421,7 +445,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
               },
               child: Container(
                 width: double.infinity,
-                height: 41,
+                height: 50,
                 decoration: BoxDecoration(
                   color: const Color(0xFF242424),
                   borderRadius: BorderRadius.circular(20),
@@ -461,14 +485,17 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: const Text(
-            '책 메모',
-            style: TextStyle(
-              color: Colors.white,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-              height: 28 / 20,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+            child: const Text(
+              '책 메모',
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.w600,
+                fontSize: 20,
+                height: 28 / 20,
+              ),
             ),
           ),
         ),
@@ -485,25 +512,28 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
 
   Widget _buildAddMemoButton(Book book) {
     return Container(
-      height: 41,
+      height: 50,
       decoration: BoxDecoration(
         color: const Color(0xFFDEDEDE),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
+          child: InkWell(
           onTap: () => _addMemo(book),
           borderRadius: BorderRadius.circular(20),
-          child: const Center(
-            child: Text(
-              '메모하기',
-              style: TextStyle(
-                color: Colors.black,
-                fontFamily: 'Pretendard',
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                height: 24 / 16,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+            child: const Center(
+              child: Text(
+                '메모하기',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontFamily: 'Pretendard',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  height: 24 / 16,
+                ),
               ),
             ),
           ),
@@ -562,7 +592,10 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('상태를 "${newStatus.value}"로 변경했습니다'),
+            content: Text(
+              '상태를 "${newStatus.value}"로 변경했습니다',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: const Color(0xFF242424),
           ),
         );

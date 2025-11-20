@@ -5,6 +5,7 @@ import '../../domain/models/memo.dart';
 import 'dart:io';
 import 'dart:developer';
 import '../../../../core/providers/supabase_client_provider.dart';
+import '../../../../core/utils/response_cache.dart';
 
 final memoRepositoryProvider = Provider((ref) {
   return MemoRepository(Supabase.instance.client);
@@ -33,6 +34,111 @@ final bookMemosProvider =
   }
 });
 
+/// 해당 책의 모든 공개 메모 가져오기 (다른 유저의 공개 메모 포함)
+/// @deprecated 페이지네이션을 위해 paginatedPublicBookMemosProvider 사용 권장
+final publicBookMemosProvider =
+    FutureProvider.family<List<Memo>, String>((ref, bookId) async {
+  if (bookId.isEmpty) return [];
+  final repository = ref.watch(memoRepositoryProvider);
+  try {
+    return await repository.getPublicBookMemos(bookId);
+  } catch (e) {
+    log('Error in publicBookMemosProvider: $e');
+    return []; // 에러가 발생해도 빈 리스트를 반환
+  }
+});
+
+/// 해당 책의 공개 메모를 페이지네이션으로 가져오기 (다른 유저의 공개 메모 포함)
+class PaginatedPublicBookMemosNotifier extends StateNotifier<AsyncValue<List<Memo>>> {
+  final MemoRepository _repository;
+  final String bookId;
+  int _page = 0;
+  static const int _limit = 10;
+  bool _hasMore = true;
+  bool _isLoading = false; // 중복 요청 방지 플래그
+
+  PaginatedPublicBookMemosNotifier({
+    required MemoRepository repository,
+    required this.bookId,
+  })  : _repository = repository,
+        super(const AsyncValue.loading()) {
+    loadInitialMemos();
+  }
+
+  Future<void> loadInitialMemos() async {
+    if (!mounted || _isLoading) return;
+    state = const AsyncValue.loading();
+    _page = 0;
+    _hasMore = true;
+    _isLoading = true;
+    try {
+      await _loadMemos();
+    } finally {
+      if (mounted) {
+        _isLoading = false;
+      }
+    }
+  }
+
+  Future<void> loadMoreMemos() async {
+    // 이미 로딩 중이거나 더 이상 불러올 데이터가 없으면 중단
+    if (_isLoading || !_hasMore || !mounted) return;
+    
+    _isLoading = true;
+    _page++;
+    try {
+      await _loadMemos();
+    } finally {
+      if (mounted) {
+        _isLoading = false;
+      }
+    }
+  }
+
+  Future<void> _loadMemos() async {
+    try {
+      final memos = await _repository.getPaginatedPublicBookMemos(
+        bookId: bookId,
+        limit: _limit,
+        offset: _page * _limit,
+      );
+
+      // dispose된 후에는 state를 업데이트하지 않음
+      if (!mounted) return;
+
+      _hasMore = memos.length == _limit;
+
+      if (_page == 0) {
+        state = AsyncValue.data(memos);
+      } else {
+        final currentMemos = state.value ?? [];
+        state = AsyncValue.data([...currentMemos, ...memos]);
+      }
+    } catch (e, st) {
+      // dispose된 후에는 state를 업데이트하지 않음
+      if (!mounted) return;
+      
+      // 에러 발생 시 이전 페이지로 롤백
+      if (_page > 0) {
+        _page--;
+      }
+      
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  bool get hasMore => _hasMore;
+  bool get isLoading => _isLoading;
+}
+
+final paginatedPublicBookMemosProvider = StateNotifierProvider.family<
+    PaginatedPublicBookMemosNotifier, AsyncValue<List<Memo>>, String>(
+  (ref, bookId) => PaginatedPublicBookMemosNotifier(
+    repository: ref.watch(memoRepositoryProvider),
+    bookId: bookId,
+  ),
+);
+
 final recentMemosProvider = FutureProvider<List<Memo>>((ref) async {
   final repository = ref.watch(memoRepositoryProvider);
   return repository.getRecentMemos();
@@ -48,6 +154,9 @@ final createMemoProvider =
       page: params.page,
     );
 
+    // 캐시 무효화 (특정 bookId만 무효화하여 효율성 향상)
+    ResponseCache().invalidate('get-public-book-memos', bookId: params.bookId);
+
     // 관련된 프로바이더들 새로고침
     ref.invalidate(bookMemosProvider(params.bookId));
     ref.invalidate(recentMemosProvider);
@@ -55,6 +164,7 @@ final createMemoProvider =
     ref.invalidate(allMemosProvider);
     ref.invalidate(paginatedMemosProvider(params.bookId));
     ref.invalidate(paginatedMemosProvider(null));
+    ref.invalidate(paginatedPublicBookMemosProvider(params.bookId));
   },
 );
 
@@ -96,6 +206,9 @@ final updateMemoProvider = FutureProvider.family<
     imageUrl: params.imageUrl,
   );
 
+  // 캐시 무효화 (특정 bookId만 무효화하여 효율성 향상)
+  ResponseCache().invalidate('get-public-book-memos', bookId: params.bookId);
+
   // 관련된 프로바이더들 새로고침
   ref.invalidate(memoProvider(params.memoId)); // 메모 상세 화면 갱신
   ref.invalidate(bookMemosProvider(params.bookId));
@@ -104,6 +217,7 @@ final updateMemoProvider = FutureProvider.family<
   ref.invalidate(allMemosProvider);
   ref.invalidate(paginatedMemosProvider(params.bookId));
   ref.invalidate(paginatedMemosProvider(null));
+  ref.invalidate(paginatedPublicBookMemosProvider(params.bookId));
 });
 
 final deleteMemoProvider =
@@ -111,6 +225,9 @@ final deleteMemoProvider =
   (ref, params) async {
     final repository = ref.watch(memoRepositoryProvider);
     await repository.deleteMemo(params.memoId);
+
+    // 캐시 무효화 (특정 bookId만 무효화하여 효율성 향상)
+    ResponseCache().invalidate('get-public-book-memos', bookId: params.bookId);
 
     // 모든 관련 provider 무효화하여 UI 업데이트
     ref.invalidate(memoProvider(params.memoId)); // 메모 상세 화면 갱신 (null 반환하여 화면 닫기)
@@ -120,6 +237,7 @@ final deleteMemoProvider =
     ref.invalidate(recentMemosProvider);
     ref.invalidate(homeRecentMemosProvider);
     ref.invalidate(allMemosProvider);
+    ref.invalidate(paginatedPublicBookMemosProvider(params.bookId));
   },
 );
 

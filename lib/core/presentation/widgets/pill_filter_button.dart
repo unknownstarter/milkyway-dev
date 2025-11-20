@@ -49,14 +49,17 @@ class PillFilterButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : const Color(0xFF6A6A6A),
-              fontFamily: 'Pretendard',
-              fontWeight: isActive ? activeFontWeight : inactiveFontWeight,
-              fontSize: fontSize,
-              height: 18 / fontSize,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : const Color(0xFF6A6A6A),
+                fontFamily: 'Pretendard',
+                fontWeight: isActive ? activeFontWeight : inactiveFontWeight,
+                fontSize: fontSize,
+                height: 18 / fontSize,
+              ),
             ),
           ),
         ),

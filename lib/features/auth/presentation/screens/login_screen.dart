@@ -82,7 +82,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('로그인에 실패했습니다. 다시 시도해 주세요.'),
+              content: Text(
+                '로그인에 실패했습니다. 다시 시도해 주세요.',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: Color(0xFF242424),
             ),
           );

@@ -48,6 +48,9 @@ class MemoErrorHandler {
   static void showErrorSnackBar(BuildContext context, String message) {
     if (!context.mounted) return;
     
+    // 하단 네비게이션 바 높이 계산
+    final bottomNavigationBarHeight = _calculateBottomNavigationBarHeight(context);
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -61,13 +64,34 @@ class MemoErrorHandler {
         backgroundColor: const Color(0xFF838383),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(
-          bottom: 20,
+        elevation: 1000, // 최상위 레이어에 표시되도록 높은 elevation 설정
+        margin: EdgeInsets.only(
+          bottom: bottomNavigationBarHeight + 20, // 네비게이션 바 높이 + 여유 공간
           left: 20,
           right: 20,
         ),
       ),
     );
+  }
+
+  /// 하단 네비게이션 바의 높이를 계산
+  /// MainShell의 bottomNavigationBar 구조를 고려하여 높이 계산
+  static double _calculateBottomNavigationBarHeight(BuildContext context) {
+    final scaffold = Scaffold.maybeOf(context);
+    
+    // 하단 네비게이션 바가 있는지 확인
+    if (scaffold?.widget.bottomNavigationBar == null) {
+      return 0;
+    }
+    
+    // MainShell의 bottomNavigationBar 구조:
+    // SafeArea (top: false, bottom: true) + padding(10+10) + minHeight(64) + SafeArea bottom
+    final mediaQuery = MediaQuery.of(context);
+    const containerPadding = 10.0 + 10.0; // top + bottom
+    const containerMinHeight = 64.0;
+    final safeAreaBottom = mediaQuery.padding.bottom;
+    
+    return containerPadding + containerMinHeight + safeAreaBottom;
   }
 
   /// 에러를 분석하여 회색 스낵바로 표시

@@ -48,7 +48,7 @@ class Auth extends _$Auth {
           await Future.delayed(const Duration(milliseconds: 100));
           final currentUser = await getCurrentUser();
           if (currentUser != null) {
-            state = AsyncValue.data(currentUser);
+          state = AsyncValue.data(currentUser);
           } else {
             state = const AsyncValue.data(null);
           }
@@ -72,7 +72,7 @@ class Auth extends _$Auth {
           await Future.delayed(const Duration(milliseconds: 100));
           final currentUser = await getCurrentUser();
           if (currentUser != null) {
-            state = AsyncValue.data(currentUser);
+          state = AsyncValue.data(currentUser);
           } else {
             state = const AsyncValue.data(null);
           }
@@ -224,6 +224,9 @@ class Auth extends _$Auth {
   /// 
   /// [nickname] 체크할 닉네임
   /// Returns true if nickname is available (not duplicate), false otherwise
+  /// 
+  /// RLS 정책으로 인해 다른 사용자의 닉네임을 직접 조회할 수 없으므로
+  /// Supabase Edge Function을 사용하여 중복 체크를 수행합니다.
   Future<bool> checkNicknameAvailability(String nickname) async {
     try {
       final currentUser = await getCurrentUser();
@@ -233,15 +236,24 @@ class Auth extends _$Auth {
         return true;
       }
 
-      // 다른 사용자가 같은 닉네임을 사용하는지 확인
-      final response = await _supabase
-          .from('users')
-          .select('id')
-          .eq('nickname', nickname)
-          .maybeSingle();
+      // Edge Function을 사용하여 닉네임 중복 체크 (RLS 정책 우회)
+      final response = await _supabase.functions.invoke(
+        'check-nickname',
+        body: {
+          'nickname': nickname,
+          'user_id': currentUser?.id,
+        },
+      );
 
-      // 결과가 없으면 사용 가능
-      return response == null;
+      if (response.status != 200) {
+        final errorData = response.data;
+        log('닉네임 중복 체크 실패: ${errorData ?? '알 수 없는 오류'}');
+        // 에러 발생 시 안전하게 false 반환 (중복으로 간주)
+        return false;
+      }
+
+      final data = response.data as Map<String, dynamic>?;
+      return data?['available'] == true;
     } catch (e) {
       log('닉네임 중복 체크 실패: $e');
       // 에러 발생 시 안전하게 false 반환 (중복으로 간주)
@@ -273,7 +285,7 @@ class Auth extends _$Auth {
       await Future.delayed(const Duration(milliseconds: 100));
       final updatedUser = await getCurrentUser();
       if (updatedUser != null) {
-        state = AsyncValue.data(updatedUser);
+      state = AsyncValue.data(updatedUser);
       }
 
       // 프로필 업데이트 시 메모 관련 provider들 무효화하여 최신 프로필 정보 반영
@@ -302,7 +314,7 @@ class Auth extends _$Auth {
         'delete-user',
         body: {'user_id': userId},
       );
-
+      
       if (response.status != 200) {
         final errorData = response.data;
         throw Exception('계정 삭제 실패: ${errorData ?? '알 수 없는 오류'}');

@@ -28,14 +28,17 @@ class _BookIntroScreenState extends ConsumerState<BookIntroScreen> {
       backgroundColor: const Color(0xFF181818),
       appBar: AppBar(
         backgroundColor: const Color(0xFF181818),
-        title: const Text(
-          '시작하기',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-            height: 28 / 20,
+        title: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: const Text(
+            '시작하기',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              height: 28 / 20,
+            ),
           ),
         ),
         centerTitle: true,
@@ -129,7 +132,7 @@ class _BookIntroScreenState extends ConsumerState<BookIntroScreen> {
   Widget _buildStartButton() {
     return Container(
       width: double.infinity,
-      height: 41,
+      height: 50,
       decoration: BoxDecoration(
         color: const Color(0xFFDEDEDE),
         borderRadius: BorderRadius.circular(20),
@@ -145,14 +148,17 @@ class _BookIntroScreenState extends ConsumerState<BookIntroScreen> {
                     color: Color(0xFFECECEC),
                     strokeWidth: 2,
                   )
-                : const Text(
-                    '책 검색하고 시작하기',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      height: 24 / 16,
+                : MediaQuery(
+                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                    child: const Text(
+                      '책 검색하고 시작하기',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontFamily: 'Pretendard',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        height: 24 / 16,
+                      ),
                     ),
                   ),
           ),

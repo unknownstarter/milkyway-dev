@@ -2,9 +2,9 @@
 
 ## 📋 개발 가이드라인
 
-**최종 업데이트:** 2025-11-20  
+**최종 업데이트:** 2025-11-21  
 **적용 대상:** 모든 개발자  
-**버전:** 1.6.0
+**버전:** 1.8.0
 
 ## 🎯 핵심 원칙
 
@@ -518,6 +518,67 @@ Future<void> _deleteItem(...) async {
 - [ ] 모든 관련 리스트 provider들이 무효화되는가?
 - [ ] 사용자가 즉시 변경사항을 확인할 수 있는가?
 - [ ] 불필요한 복잡한 로직이 없는가?
+
+## 🔧 Supabase Edge Functions 규칙
+
+### 1. RLS 정책 우회가 필요한 경우
+RLS (Row Level Security) 정책으로 인해 클라이언트에서 다른 사용자의 데이터를 직접 조회할 수 없는 경우, **Supabase Edge Function**을 사용해야 합니다.
+
+**예시: 닉네임 중복 체크**
+```dart
+// ❌ 잘못된 방법: RLS 정책으로 인해 다른 사용자의 닉네임 조회 불가
+final response = await _supabase
+    .from('users')
+    .select('id')
+    .eq('nickname', nickname)
+    .maybeSingle();
+
+// ✅ 올바른 방법: Edge Function 사용
+final response = await _supabase.functions.invoke(
+  'check-nickname',
+  body: {
+    'nickname': nickname,
+    'user_id': currentUser?.id,
+  },
+);
+```
+
+**Edge Function 사용 시나리오**:
+- 다른 사용자의 데이터 조회가 필요한 경우
+- 복잡한 서버 사이드 로직이 필요한 경우
+- Service Role Key가 필요한 경우 (RLS 우회)
+
+**참고 문서**: [SUPABASE_EDGE_FUNCTIONS.md](./SUPABASE_EDGE_FUNCTIONS.md)
+
+### 2. Edge Function 배포 규칙
+- **배포 전 테스트 필수**: 로컬 환경에서 충분히 테스트 후 배포
+- **에러 처리**: Edge Function 호출 시 항상 에러 처리 포함
+- **입력 검증**: 모든 입력값 검증 필수
+- **보안**: Service Role Key는 절대 클라이언트에 노출하지 않음
+
+### 3. Edge Function 호출 패턴
+```dart
+try {
+  final response = await _supabase.functions.invoke(
+    'function-name',
+    body: {
+      'param1': value1,
+      'param2': value2,
+    },
+  );
+
+  if (response.status != 200) {
+    final errorData = response.data;
+    throw Exception('Function 호출 실패: ${errorData ?? '알 수 없는 오류'}');
+  }
+
+  final data = response.data as Map<String, dynamic>?;
+  return data?['result'];
+} catch (e) {
+  log('Edge Function 호출 실패: $e');
+  rethrow;
+}
+```
 
 ## 🗄️ Supabase 데이터 처리 규칙
 
@@ -1108,8 +1169,246 @@ void initState() {
 
 ---
 
+---
+
+## ⚡ 페이지네이션 및 성능 최적화 규칙
+
+### 1. 서버 사이드 페이지네이션 필수
+
+#### 대량 데이터는 반드시 페이지네이션
+- **10개씩 로딩**: 한 번에 10개씩 로딩하여 초기 로딩 시간 단축
+- **즉시 로딩 시작**: `StateNotifier`를 사용하여 화면 진입 시 즉시 로딩 시작
+- **자동 다음 페이지 로드**: 스크롤 감지로 자동으로 다음 페이지 로드
+
+#### ✅ 좋은 예시
+```dart
+class PaginatedMemosNotifier extends StateNotifier<AsyncValue<List<Memo>>> {
+  int _page = 0;
+  static const int _limit = 10;
+  bool _hasMore = true;
+  bool _isLoading = false; // 중복 요청 방지
+
+  PaginatedMemosNotifier({required MemoRepository repository})
+      : _repository = repository,
+        super(const AsyncValue.loading()) {
+    loadInitialMemos(); // 생성 시 즉시 로딩 시작
+  }
+
+  Future<void> loadMoreMemos() async {
+    if (_isLoading || !_hasMore || !mounted) return;
+    
+    _isLoading = true;
+    _page++;
+    try {
+      final memos = await _repository.getPaginatedMemos(
+        limit: _limit,
+        offset: _page * _limit,
+      );
+      
+      if (!mounted) return;
+      
+      _hasMore = memos.length == _limit;
+      
+      if (_page == 0) {
+        state = AsyncValue.data(memos);
+      } else {
+        final currentMemos = state.value ?? [];
+        state = AsyncValue.data([...currentMemos, ...memos]);
+      }
+    } catch (e, st) {
+      if (!mounted) return;
+      if (_page > 0) _page--; // 에러 시 페이지 롤백
+      state = AsyncValue.error(e, st);
+    } finally {
+      if (mounted) _isLoading = false;
+    }
+  }
+}
+```
+
+#### ❌ 나쁜 예시
+```dart
+// ❌ 나쁜 예: 전체 데이터를 한 번에 로딩
+final allMemosProvider = FutureProvider<List<Memo>>((ref) async {
+  return await repository.getAllMemos(); // 전체 데이터 로딩
+});
+
+// ❌ 나쁜 예: FutureProvider 사용 (화면 진입 후 로딩 시작)
+final memosProvider = FutureProvider.family<List<Memo>, String>((ref, bookId) async {
+  return await repository.getMemos(bookId);
+});
+```
+
+### 2. 중복 요청 방지
+
+#### isLoading 플래그 필수
+- **동시 요청 방지**: `isLoading` 플래그로 동시에 여러 요청이 발생하지 않도록 방지
+- **mounted 체크**: `StateNotifier`가 dispose된 후 상태 업데이트 방지
+
+```dart
+bool _isLoading = false;
+
+Future<void> loadMoreMemos() async {
+  if (_isLoading || !_hasMore || !mounted) return; // 중복 요청 방지
+  
+  _isLoading = true;
+  try {
+    // ... 로딩 로직
+  } finally {
+    if (mounted) _isLoading = false;
+  }
+}
+```
+
+### 3. 스크롤 최적화
+
+#### Throttle 적용
+- **300ms 간격**: 스크롤 이벤트를 300ms 간격으로 제한하여 불필요한 요청 방지
+- **NotificationListener 사용**: `ScrollUpdateNotification`으로 스크롤 감지
+
+```dart
+DateTime? _lastScrollTime;
+
+NotificationListener<ScrollNotification>(
+  onNotification: (notification) {
+    if (notification is ScrollUpdateNotification) {
+      final metrics = notification.metrics;
+      final now = DateTime.now();
+      
+      // 300ms throttle
+      if (_lastScrollTime != null &&
+          now.difference(_lastScrollTime!).inMilliseconds < 300) {
+        return false;
+      }
+      
+      // 하단 200px 전에 다음 페이지 로드
+      if (metrics.pixels >= metrics.maxScrollExtent - 200) {
+        if (notifier.hasMore && !notifier.isLoading) {
+          _lastScrollTime = now;
+          notifier.loadMoreMemos();
+        }
+      }
+    }
+    return false;
+  },
+  child: // ... 리스트 위젯
+)
+```
+
+### 4. 재시도 로직
+
+#### 네트워크 에러만 재시도
+- **첫 페이지는 재시도 없이**: 사용자 경험을 위해 첫 페이지는 재시도 없이 빠르게 실패 처리
+- **다음 페이지는 재시도**: 안정성을 위해 다음 페이지는 exponential backoff로 재시도
+- **재시도 횟수 제한**: 최대 2-3회로 제한하여 무한 재시도 방지
+
+```dart
+// ✅ 좋은 예: 첫 페이지와 다음 페이지 구분
+if (offset == 0) {
+  // 첫 페이지는 재시도 없이 즉시 호출
+  try {
+    return await operation();
+  } catch (e) {
+    if (RetryHelper.isNetworkError(e)) {
+      // 네트워크 에러만 재시도
+      return await RetryHelper.retryWithBackoff(
+        operation: operation,
+        maxRetries: 2,
+        initialDelay: const Duration(milliseconds: 500),
+      );
+    }
+    rethrow;
+  }
+} else {
+  // 다음 페이지는 재시도 적용
+  return await RetryHelper.retryWithBackoff(
+    operation: operation,
+    maxRetries: 2,
+    initialDelay: const Duration(milliseconds: 500),
+  );
+}
+```
+
+### 5. 응답 캐싱
+
+#### 첫 페이지만 캐싱
+- **TTL 설정**: 2분간 캐싱하여 실시간성과 효율성 균형
+- **선택적 무효화**: 전체 캐시를 무효화하지 않고 특정 항목만 무효화
+- **JSON 직렬화로 키 생성**: `Map.toString()` 대신 `jsonEncode` 사용
+
+```dart
+// ✅ 좋은 예: 첫 페이지만 캐싱
+if (offset == 0) {
+  final cached = cache.get<Map<String, dynamic>>(functionName, requestBody);
+  if (cached != null) {
+    return cached['memos'] as List<Memo>;
+  }
+  
+  // ... 데이터 로딩
+  
+  cache.set(functionName, requestBody, result, ttl: const Duration(minutes: 2));
+}
+
+// ✅ 좋은 예: 선택적 캐시 무효화
+void invalidateCache(String bookId) {
+  ResponseCache().invalidate('get-public-book-memos', body: {'book_id': bookId});
+}
+```
+
+### 6. 오버플로우 방지
+
+#### 동적 높이 사용
+- **itemExtent 제거**: 콘텐츠 높이가 가변적이면 `itemExtent`를 제거하고 실제 높이에 맞게 자동 계산
+- **Column 사용**: `shrinkWrap: true`를 사용하는 경우 `Column`이 더 안전할 수 있음
+
+```dart
+// ✅ 좋은 예: 동적 높이
+ListView.builder(
+  shrinkWrap: true,
+  physics: const NeverScrollableScrollPhysics(),
+  // itemExtent 제거 - 실제 높이에 맞게 자동 계산
+  itemCount: memos.length,
+  itemBuilder: (context, index) {
+    return MemoCard(memo: memos[index]); // 높이가 가변적
+  },
+)
+
+// ❌ 나쁜 예: 고정 높이 (오버플로우 발생 가능)
+ListView.builder(
+  itemExtent: 240.0, // 실제 높이보다 작으면 오버플로우
+  itemCount: memos.length,
+  itemBuilder: (context, index) {
+    return MemoCard(memo: memos[index]); // 실제 높이는 250px
+  },
+)
+```
+
+### 7. Edge Function 최적화
+
+#### count 계산 최적화
+- **첫 페이지만 count 계산**: `count: 'exact'`는 첫 페이지(offset=0)에서만 사용
+- **limit 최대값 제한**: 최대 50개로 제한하여 과도한 데이터 로딩 방지
+
+```typescript
+// ✅ 좋은 예: 첫 페이지만 count 계산
+const includeCount = body.include_count !== false;
+const offset = Math.max(body.offset || 0, 0);
+
+const { data, error, count } = await supabase
+  .from('memos')
+  .select('*', includeCount && offset === 0 ? { count: 'exact' } : undefined)
+  .eq('book_id', bookId)
+  .range(offset, offset + limit - 1);
+
+const hasMore = count !== null
+  ? (offset + limit) < count
+  : data.length === limit; // 근사치 사용
+```
+
+---
+
 **문서 작성일:** 2025-11-11  
-**최종 업데이트:** 2025-11-20  
+**최종 업데이트:** 2025-11-21  
 **작성자:** AI Assistant  
 **검토자:** 개발팀  
-**다음 검토 예정일:** 2025-12-20
+**다음 검토 예정일:** 2025-12-21
