@@ -22,12 +22,24 @@
           }
         },
         {
+          "client_id": "394691029555-kof1h958tfuuk9g72vr4dmh142ii668u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whatif.milkyway.android",
+            "certificate_hash": "7143277d5d5f5efcbdd43d756b395ddcb80355c1"
+          }
+        },
+        {
           "client_id": "394691029555-pgoc5migv2lqo5d3d76gfoksuuh7paai.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.whatif.milkyway.android",
             "certificate_hash": "76f96181986503cdb8d4e88ef2c2288069b2ecf0"
           }
+        },
+        {
+          "client_id": "394691029555-98k9mp6pt0fas3vktvqiaei4k45df2du.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
       "api_key": [
