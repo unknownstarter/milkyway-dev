@@ -141,12 +141,19 @@
 ## 9️⃣ 앱 스토어 정보
 
 ### Google Play Store (Android)
-- [ ] 기존 앱의 Package Name 확인
-- [ ] 기존 앱의 버전 코드 확인
-- [ ] 기존 앱의 서명 키 확인
+- [ ] 기존 앱의 Package Name 확인 (`com.whatif.milkyway.android`)
+- [ ] 기존 앱의 버전 코드 확인 (현재: 14)
+- [ ] 기존 앱의 서명 키 확인 (SHA1 지문 확인)
+- [ ] `key.properties` 파일 존재 및 비밀번호 확인
+- [ ] 키스토어 파일 위치 확인 (`android/app/upload-keystore.jks`)
+- [ ] Google Play Console 접속 및 테스트 트랙 선택
+- [ ] AAB 파일 업로드 준비 (`build/app/outputs/bundle/release/app-release.aab`)
+- [ ] 출시 노트 작성 준비
+
+**참고**: 자세한 내용은 [ANDROID_DEPLOYMENT.md](./ANDROID_DEPLOYMENT.md) 참고
 
 ### App Store (iOS)
-- [ ] 기존 앱의 Bundle ID 확인
+- [ ] 기존 앱의 Bundle ID 확인 (`com.whatif.milkyway`)
 - [ ] 기존 앱의 버전 확인
 - [ ] 기존 앱의 App Store Connect 설정 확인
 
@@ -170,14 +177,25 @@
 ```bash
 # Android
 flutter clean
-flutter build apk --release
-# 또는
 flutter build appbundle --release
+# 결과: build/app/outputs/bundle/release/app-release.aab
 
 # iOS
 flutter clean
+cd ios && pod install && cd ..
 flutter build ios --release
 ```
+
+### 안드로이드 빌드 전 확인사항
+- [ ] `pubspec.yaml` 버전 코드 증가 확인
+- [ ] `android/app/key.properties` 파일 존재 및 비밀번호 확인
+- [ ] 키스토어 파일 위치 확인
+- [ ] `google-services.json` 최신 버전 확인
+
+### 안드로이드 빌드 후 확인사항
+- [ ] AAB 파일 생성 확인
+- [ ] 키스토어 SHA1 지문과 Google Play Console 일치 확인
+- [ ] 버전 코드 중복 확인 (이전 버전 코드보다 높아야 함)
 
 ---
 
@@ -204,8 +222,16 @@ flutter build ios --release
 3. Pull Request 생성 (필요 시)
 
 ### 5단계: 앱 스토어 배포
-1. Android: Google Play Console에 업로드
-2. iOS: App Store Connect에 업로드
+1. **Android: Google Play Console에 업로드**
+   - 테스트 트랙 선택 (내부 테스트/알파/베타)
+   - "새 버전 만들기" 클릭
+   - AAB 파일 업로드
+   - 출시 노트 작성
+   - 출시 및 테스트
+2. **iOS: App Store Connect에 업로드**
+   - Xcode에서 Archive 생성
+   - Distribute App 선택
+   - App Store Connect에 업로드
 3. 스토어 리뷰 대기
 
 ---
@@ -248,5 +274,9 @@ flutter build ios --release
 
 ---
 
-**마지막 업데이트**: 2025-11-18
+**마지막 업데이트**: 2025-11-27
+
+**참고 문서:**
+- [ANDROID_DEPLOYMENT.md](./ANDROID_DEPLOYMENT.md) - 안드로이드 배포 상세 가이드
+- [LESSONS_LEARNED.md](./LESSONS_LEARNED.md) - 배포 과정에서 배운 교훈
 

@@ -29,7 +29,12 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
   @override
   void initState() {
     super.initState();
-    _focusNode.requestFocus();
+    // 위젯이 완전히 빌드된 후에 포커스 요청
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
     ref.read(analyticsProvider).logScreenView('book_search_screen');
   }
 
@@ -104,12 +109,19 @@ class _BookSearchScreenState extends ConsumerState<BookSearchScreen> {
   }
 
   Widget _buildSearchInput() {
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       child: TextField(
         controller: _searchController,
         focusNode: _focusNode,
         onChanged: _onSearchChanged,
+        // autofocus 제거: initState의 requestFocus와 중복되어 IME 충돌 발생
+        textInputAction: TextInputAction.search,
+        keyboardType: TextInputType.text,
+        enableInteractiveSelection: true,
+        enableSuggestions: !isAndroid, // 안드로이드에서는 false (한글 IME 충돌 방지)
         cursorColor: Colors.white,
         style: const TextStyle(color: Colors.white, fontFamily: 'Pretendard'),
         decoration: InputDecoration(

@@ -351,6 +351,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: _nicknameController,
+          enableInteractiveSelection: true,
+          enableSuggestions: Theme.of(context).platform != TargetPlatform.android, // 안드로이드에서는 false
           cursorColor: Colors.white,
           style: const TextStyle(
             color: Colors.white,

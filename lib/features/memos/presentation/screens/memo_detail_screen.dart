@@ -98,6 +98,7 @@ class _MemoDetailScreenState extends ConsumerState<MemoDetailScreen> {
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () {

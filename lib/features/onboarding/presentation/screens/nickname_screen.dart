@@ -233,6 +233,8 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
         const SizedBox(height: 10),
         TextField(
           controller: _nicknameController,
+          enableInteractiveSelection: true,
+          enableSuggestions: Theme.of(context).platform != TargetPlatform.android, // 안드로이드에서는 false
           style: const TextStyle(
             color: Colors.white,
             fontFamily: 'Pretendard',

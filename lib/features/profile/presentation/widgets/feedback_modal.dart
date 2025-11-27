@@ -39,6 +39,8 @@ class FeedbackModal extends ConsumerWidget {
               controller: textController,
               maxLength: 500,
               maxLines: null,
+              enableInteractiveSelection: true,
+              enableSuggestions: Theme.of(context).platform != TargetPlatform.android, // 안드로이드에서는 false
               cursorColor: Colors.white,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(

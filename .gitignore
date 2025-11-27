@@ -46,3 +46,8 @@ app.*.map.json
 
 # Environment variables
 .env
+
+# Android signing keys (보안상 절대 커밋하면 안 됨)
+android/app/key.properties
+android/app/*.jks
+android/app/*.keystore

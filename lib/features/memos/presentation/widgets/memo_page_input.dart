@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// 메모 페이지 숫자 입력 위젯
 class MemoPageInput extends StatelessWidget {
@@ -27,7 +28,16 @@ class MemoPageInput extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          keyboardType: TextInputType.number,
+          keyboardType: const TextInputType.numberWithOptions(
+            signed: false,
+            decimal: false,
+          ),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly, // 숫자만 입력 가능
+          ],
+          textInputAction: TextInputAction.done,
+          enableInteractiveSelection: true,
+          enableSuggestions: false, // 숫자 입력이므로 자동완성 불필요
           cursorColor: Colors.white,
           style: const TextStyle(
             color: Colors.white,

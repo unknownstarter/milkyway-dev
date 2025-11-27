@@ -4,9 +4,87 @@
 
 이 문서는 Milkyway 앱 개발 과정에서 배운 교훈과 실수를 기록하여 향후 유사한 문제를 방지하고, 더 나은 개발을 위한 가이드로 활용합니다.
 
-**최종 업데이트:** 2025-11-21  
+**최종 업데이트:** 2025-11-27  
 **작성자:** AI Assistant  
 **검토자:** 개발팀
+
+---
+
+## 🎯 2025-11-27: 안드로이드 빌드 설정 업그레이드 및 배포
+
+### 문제 상황
+1. **8개월 만의 안드로이드 배포**: iOS는 최근 배포했지만 안드로이드는 8개월 만에 배포를 시도
+2. **빌드 설정 오래됨**: Flutter SDK, Kotlin, Gradle 버전이 오래되어 빌드 실패
+3. **중복 설정 파일**: `.kts` 파일과 `.gradle` 파일이 중복 존재
+4. **서명 키 문제**: 기존 키스토어 비밀번호 기억하지 못함
+5. **텍스트 입력 문제**: 안드로이드에서 한글 입력 불가, 키보드 깜빡임, 앱 멈춤
+6. **앱바 타이틀 정렬**: 안드로이드에서만 타이틀이 왼쪽 정렬
+7. **숫자 키보드 미표시**: 페이지 입력 필드에서 숫자 키보드가 나타나지 않음
+
+### 원인 분석
+1. **Flutter SDK 버전 불일치**: `pubspec.yaml`의 SDK 버전이 설치된 Flutter 버전과 불일치
+2. **패키지 호환성**: `sign_in_with_apple` 패키지가 오래된 Kotlin 버전과 호환되지 않음
+3. **Java 버전**: Java 17에서 Java 21로 업그레이드 필요
+4. **IME 충돌**: `autofocus: true`와 `initState`의 `requestFocus` 중복으로 IME 초기화 충돌
+5. **enableSuggestions 충돌**: 안드로이드에서 `enableSuggestions: true`가 한글 IME와 충돌
+6. **플랫폼별 기본값**: 안드로이드 AppBar의 `centerTitle` 기본값이 `false`
+7. **TextInputType.number 한계**: 안드로이드에서 `TextInputType.number`만으로는 숫자 키보드가 항상 나타나지 않음
+
+### 해결 과정
+1. **빌드 설정 업그레이드**:
+   - Flutter SDK: `^3.6.0` → `^3.10.0`
+   - Android Gradle Plugin: `8.2.2` → `8.7.3`
+   - Kotlin: `1.9.22` → `2.1.0`
+   - Gradle: `8.2` → `8.9`
+   - Java: `17` → `21`
+   - `sign_in_with_apple`: `^5.0.0` → `^7.0.1`
+
+2. **중복 파일 정리**:
+   - `android/app/build.gradle.kts` 삭제
+   - `android/settings.gradle.kts` 삭제
+   - 중복 `MainActivity.kt` 삭제
+
+3. **서명 키 관리**:
+   - 기존 키스토어 파일 위치 확인 (`~/upload-keystore.jks`)
+   - `key.properties` 파일 생성 및 비밀번호 설정
+   - SHA1 지문 확인 및 Google Play Console과 일치 확인
+
+4. **텍스트 입력 문제 해결**:
+   - `autofocus: true` 제거 (중복 포커스 요청 방지)
+   - `enableSuggestions: !isAndroid` (안드로이드에서만 false)
+   - `enableInteractiveSelection: true` 추가
+   - `MainActivity.kt` 정리 (불필요한 `onCreate` 제거)
+
+5. **앱바 타이틀 중앙 정렬**:
+   - `centerTitle: true` 명시적 설정
+
+6. **숫자 키보드 문제 해결**:
+   - `TextInputType.numberWithOptions(signed: false, decimal: false)` 사용
+   - `inputFormatters: [FilteringTextInputFormatter.digitsOnly]` 추가
+   - `textInputAction: TextInputAction.done` 추가
+
+### 배운 점
+- **Flutter SDK 업그레이드는 iOS에도 영향**: iOS CocoaPods 재설치 필요 (`pod install`)
+- **중복 설정 파일 주의**: Groovy와 Kotlin DSL 파일이 동시에 있으면 혼란 발생
+- **서명 키는 절대 분실하면 안 됨**: 분실 시 Google Play Console에서 업로드 키 재설정 필요
+- **플랫폼별 기본값 차이**: iOS와 Android의 기본 동작이 다르므로 명시적 설정 필요
+- **IME 충돌 주의**: `autofocus`와 `requestFocus` 중복 사용 시 IME 초기화 충돌 발생
+- **안드로이드 한글 입력**: `enableSuggestions: true`가 한글 IME와 충돌할 수 있음
+- **숫자 키보드**: `TextInputType.number`만으로는 부족, `numberWithOptions`와 `inputFormatters` 필요
+- **버전 코드 관리**: Google Play Console 업로드 시마다 버전 코드는 반드시 증가해야 함
+- **키스토어 SHA1 지문**: Google Play Console에서 요구하는 지문과 일치해야 업로드 가능
+
+### 실수
+- Flutter SDK 버전을 확인하지 않고 `^3.27.0`으로 설정하여 빌드 실패
+- 기존 키스토어 비밀번호를 기억하지 못하여 새로 생성 시도 (기존 키와 불일치)
+- `autofocus`와 `requestFocus`를 동시에 사용하여 IME 충돌 발생
+- 안드로이드에서 `enableSuggestions: true`로 설정하여 한글 입력 불가
+- `TextInputType.number`만 사용하여 숫자 키보드가 나타나지 않음
+- `centerTitle`을 설정하지 않아 안드로이드에서 타이틀이 왼쪽 정렬
+
+### 참고 문서
+- [ANDROID_DEPLOYMENT.md](./ANDROID_DEPLOYMENT.md) - 안드로이드 배포 가이드
+- [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) - 배포 체크리스트
 
 ---
 
@@ -319,6 +397,24 @@ TestFlight에서 실제 디바이스로 앱을 다운로드했을 때, 스플래
 - **캐시 크기 제한**: 메모리 사용량을 제한하기 위해 LRU 방식으로 오래된 항목 제거
 - **선택적 무효화**: 전체 캐시를 무효화하지 않고 특정 항목만 무효화
 
+### 13. 안드로이드 빌드 및 배포
+- **Flutter SDK 업그레이드 시 iOS 확인**: `pod install` 필수
+- **중복 설정 파일 정리**: Groovy와 Kotlin DSL 파일이 동시에 있으면 혼란 발생
+- **서명 키 백업 필수**: 키스토어 파일과 비밀번호는 안전하게 보관
+- **SHA1 지문 확인**: Google Play Console과 일치해야 업로드 가능
+- **버전 코드 관리**: 업로드 시마다 반드시 증가해야 함
+- **플랫폼별 기본값 차이**: iOS와 Android의 기본 동작이 다르므로 명시적 설정 필요
+
+### 14. 안드로이드 텍스트 입력
+- **IME 충돌 방지**: `autofocus`와 `requestFocus` 중복 사용 금지
+- **한글 입력 지원**: 안드로이드에서 `enableSuggestions: false` 설정
+- **숫자 키보드**: `TextInputType.numberWithOptions`와 `inputFormatters` 사용
+- **플랫폼별 설정**: `Theme.of(context).platform`으로 플랫폼 구분
+
+### 15. 안드로이드 UI 설정
+- **앱바 타이틀**: `centerTitle: true` 명시적 설정 필요
+- **텍스트 선택**: `enableInteractiveSelection: true` 설정
+
 ---
 
 ## 🔄 개선 사항
@@ -333,5 +429,5 @@ TestFlight에서 실제 디바이스로 앱을 다운로드했을 때, 스플래
 **문서 작성일:** 2025-11-19  
 **작성자:** AI Assistant  
 **검토자:** 개발팀  
-**다음 검토 예정일:** 2025-12-20
+**다음 검토 예정일:** 2025-12-27
 
