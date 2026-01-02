@@ -265,26 +265,42 @@ class MemoRepository {
     await _client.from('memos').delete().eq('id', memoId);
   }
 
+  /// 메모 ID로 조회 (공개/비공개 모두 조회 가능, 다른 유저의 메모도 조회 가능)
+  /// RLS 정책으로 인해 users 조인 시 다른 유저 정보를 가져올 수 없으므로 Edge Function 사용
   Future<Memo> getMemoById(String memoId) async {
-    final response = await _client
-        .from('memos')
-        .select('''
-          *,
-          books (
-            id,
-            title,
-            author,
-            cover_url
-          ),
-          users!user_id (
-            nickname,
-            picture_url
-          )
-        ''')
-        .eq('id', memoId)
-        .single();
+    try {
+      log('get-memo-by-id 호출 시작: $memoId');
+      final response = await _client.functions.invoke(
+        'get-memo-by-id',
+        body: {'memo_id': memoId},
+      );
 
-    return Memo.fromJson(response);
+      log('get-memo-by-id 응답 상태: ${response.status}');
+      log('get-memo-by-id 응답 데이터: ${response.data}');
+
+      if (response.status != 200) {
+        final errorData = response.data;
+        log('메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+        throw Exception('메모 조회 실패: ${errorData ?? '알 수 없는 오류'}');
+      }
+
+      final result = response.data as Map<String, dynamic>;
+      final memoData = result['memo'] as Map<String, dynamic>?;
+
+      if (memoData == null) {
+        log('메모 데이터가 null입니다. result: $result');
+        throw Exception('메모를 찾을 수 없습니다.');
+      }
+
+      log('메모 데이터 파싱 전: users=${memoData['users']}, nickname=${memoData['users']?['nickname']}');
+      final memo = Memo.fromJson(memoData);
+      log('메모 파싱 후: userNickname=${memo.userNickname}, userAvatarUrl=${memo.userAvatarUrl}');
+      return memo;
+    } catch (e, stackTrace) {
+      log('메모 조회 중 오류 발생: $e');
+      log('스택 트레이스: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<List<Memo>> getAllMemos() async {

@@ -13,11 +13,15 @@ final memoRepositoryProvider = Provider((ref) {
 
 final memoProvider = FutureProvider.family<Memo?, String>((ref, memoId) async {
   try {
+    log('memoProvider 호출: $memoId');
     final repository = ref.watch(memoRepositoryProvider);
-    return await repository.getMemoById(memoId);
-  } catch (e) {
+    final memo = await repository.getMemoById(memoId);
+    log('memoProvider 성공: userNickname=${memo.userNickname}, userAvatarUrl=${memo.userAvatarUrl}');
+    return memo;
+  } catch (e, stackTrace) {
     // 메모가 삭제되었거나 존재하지 않는 경우 null 반환
     log('메모 조회 실패 (삭제되었을 수 있음): $e');
+    log('스택 트레이스: $stackTrace');
     return null;
   }
 });

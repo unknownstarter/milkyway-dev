@@ -19,21 +19,18 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const bookId = body.book_id;
-    const limit = Math.min(body.limit || 10, 50); // 기본값 10, 최대 50으로 제한
-    const offset = Math.max(body.offset || 0, 0); // 음수 방지
-    const includeCount = body.include_count !== false; // 기본값 true, 첫 페이지에서만 필요
+    const memoId = body.memo_id;
 
-    if (!bookId || typeof bookId !== 'string') {
-      return new Response(JSON.stringify({ error: "book_id가 제공되지 않았습니다." }), {
+    if (!memoId || typeof memoId !== 'string') {
+      return new Response(JSON.stringify({ error: "memo_id가 제공되지 않았습니다." }), {
         headers: { 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
-    // Service Role Key를 사용하므로 RLS 정책을 우회하여 모든 공개 메모와 사용자 정보 조회 가능
-    // count는 첫 페이지(offset === 0)에서만 계산하여 성능 최적화
-    let query = supabase
+    // Service Role Key를 사용하므로 RLS 정책을 우회하여 메모와 사용자 정보 조회 가능
+    // 공개/비공개 모두 조회 가능 (메모 상세 화면에서 필요)
+    const { data, error } = await supabase
       .from('memos')
       .select(
         `
@@ -48,36 +45,28 @@ Deno.serve(async (req) => {
           nickname,
           picture_url
         )
-      `,
-        includeCount && offset === 0 ? { count: 'exact' } : undefined
+      `
       )
-      .eq('book_id', bookId)
-      .eq('visibility', 'public')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    // book_id로 목록 조회
-    const { data, error, count } = await query;
+      .eq('id', memoId)
+      .single();
 
     if (error) {
-      console.error('공개 메모 조회 실패:', error);
+      console.error('메모 조회 실패:', error);
       return new Response(JSON.stringify({ error: error.message }), {
         headers: { 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    // count가 없으면 (첫 페이지가 아니면) 결과 길이로 hasMore 판단
-    const hasMore = count !== null
-      ? (offset + limit) < count
-      : data.length === limit; // 정확하지 않지만 근사치로 사용
+    if (!data) {
+      return new Response(JSON.stringify({ error: "메모를 찾을 수 없습니다." }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 404,
+      });
+    }
 
     return new Response(
-      JSON.stringify({
-        memos: data || [],
-        hasMore: hasMore,
-        total: count || 0,
-      }),
+      JSON.stringify({ memo: data }),
       {
         headers: { 'Content-Type': 'application/json' },
       }
