@@ -4,9 +4,68 @@
 
 이 문서는 Milkyway 앱 개발 과정에서 배운 교훈과 실수를 기록하여 향후 유사한 문제를 방지하고, 더 나은 개발을 위한 가이드로 활용합니다.
 
-**최종 업데이트:** 2025-11-27  
+**최종 업데이트:** 2026-01-02  
 **작성자:** AI Assistant  
 **검토자:** 개발팀
+
+---
+
+## 🎯 2026-01-02: Google Play 정책 준수 및 Android 15 지원
+
+### 문제 상황
+1. **공개 메모 상세 화면 프로필 정보 미표시**: 다른 사람이 남긴 공개 메모의 상세 화면에서 메모 소유자의 프로필 이미지와 닉네임이 표시되지 않음 (빈 프로필 이미지 + "User"로 표시)
+2. **Google Play 권한 정책 위반**: `READ_MEDIA_IMAGES` 권한 사용이 앱의 핵심 목적과 직접적인 관련이 없다는 이유로 앱 업데이트 거절
+3. **Android 15 지원 중단된 API 사용**: `Window.setStatusBarColor`, `setNavigationBarColor`, `setNavigationBarDividerColor` API가 Android 15에서 지원 중단
+4. **Edge-to-Edge 미지원**: SDK 35 타겟팅 앱이 Android 15 이상에서 더 넓은 화면을 표시하지 않음
+
+### 원인 분석
+1. **RLS 정책 제약**: 메모 상세 화면에서 `getMemoById`를 직접 Supabase 쿼리로 호출했지만, RLS 정책으로 인해 다른 유저의 `users` 정보를 조인할 수 없음
+2. **권한 사용 불필요**: 일회성 이미지 선택에는 Android Photo Picker를 사용해야 하는데, `READ_MEDIA_IMAGES` 권한을 선언하여 Google Play 정책 위반
+3. **구식 API 사용**: Flutter 엔진 내부에서 지원 중단된 Window API를 사용하여 Android 15 호환성 문제 발생
+4. **Edge-to-Edge 미활성화**: MainActivity에서 Edge-to-Edge 모드를 활성화하지 않아 Android 15에서 올바르게 표시되지 않음
+
+### 해결 과정
+1. **공개 메모 상세 화면 프로필 정보 표시**:
+   - `get-memo-by-id` Edge Function 생성 및 배포
+   - Service Role Key를 사용하여 RLS 정책 우회
+   - `MemoRepository.getMemoById`에서 Edge Function 호출로 변경
+   - 디버깅 로그 추가
+
+2. **Google Play 권한 정책 준수**:
+   - `AndroidManifest.xml`에서 `READ_MEDIA_IMAGES` 권한 제거
+   - `image_picker` 패키지가 Android 13+에서 자동으로 Photo Picker 사용 (코드 변경 불필요)
+   - Android 12 이하는 `READ_EXTERNAL_STORAGE` 사용 (`maxSdkVersion="32"`로 제한)
+
+3. **Android 15 지원 중단된 API 대체**:
+   - `MainActivity.kt`에 Edge-to-Edge 활성화 코드 추가
+   - `WindowCompat.setDecorFitsSystemWindows(window, false)` 사용
+   - `androidx.core:core-ktx:1.13.1` 의존성 추가
+
+4. **Edge-to-Edge 지원**:
+   - Android 15 (API 35) 이상에서 자동으로 Edge-to-Edge 모드 활성화
+   - Flutter 코드에서 이미 `SafeArea`와 `MediaQuery.padding`을 사용 중이므로 추가 작업 불필요
+
+### 배운 점
+- **RLS 정책은 조인에도 적용**: 다른 유저의 데이터를 조인할 때도 RLS 정책이 적용되므로 Edge Function 필요
+- **Edge Function은 단일 책임 원칙 준수**: `get-public-book-memos`와 `get-memo-by-id`를 분리하여 각각의 책임 명확화
+- **Google Play 권한 정책 엄격**: 일회성 미디어 접근에는 Photo Picker 사용 필수, 권한 선언 시 거절
+- **Android Photo Picker 자동 지원**: `image_picker` 1.0.7 이상은 Android 13+에서 자동으로 Photo Picker 사용
+- **Android 15 호환성**: 지원 중단된 Window API 대신 `WindowCompat` 사용 필요
+- **Edge-to-Edge는 필수**: SDK 35 타겟팅 앱은 Android 15 이상에서 Edge-to-Edge 지원 필수
+- **iOS는 영향 없음**: Android의 Edge-to-Edge는 iOS에 적용되지 않음 (다른 시스템)
+- **SafeArea는 이미 처리됨**: Flutter 코드에서 이미 `SafeArea`를 사용 중이므로 Edge-to-Edge 모드에서도 정상 동작
+
+### 실수
+- 메모 상세 화면에서도 RLS 정책을 고려하지 않고 직접 쿼리 시도
+- `get-public-book-memos`에 `memo_id` 기능을 추가하려고 시도 (단일 책임 원칙 위반)
+- `READ_MEDIA_IMAGES` 권한을 선언하여 Google Play 정책 위반
+- Android 15 지원 중단된 API 문제를 미리 파악하지 못함
+- Edge-to-Edge 지원을 미리 준비하지 않음
+
+### 참고 문서
+- [SUPABASE_EDGE_FUNCTIONS.md](./SUPABASE_EDGE_FUNCTIONS.md) - Edge Functions 가이드
+- [DEVELOPER_RULES.md](./DEVELOPER_RULES.md) - Supabase Edge Functions 규칙
+- [ANDROID_DEPLOYMENT.md](./ANDROID_DEPLOYMENT.md) - 안드로이드 배포 가이드
 
 ---
 

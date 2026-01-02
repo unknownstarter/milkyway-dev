@@ -2,9 +2,41 @@
 
 ## 📋 버전 관리
 
-**현재 버전:** 1.0.0-dev  
-**최종 업데이트:** 2025-11-21  
+**현재 버전:** 0.1.0+15  
+**최종 업데이트:** 2026-01-02  
 **개발 상태:** 개발 중
+
+---
+
+## 🚀 [0.1.0+15] - 2026-01-02
+
+### 🎯 공개 메모 상세 화면 프로필 정보 표시 (2026-01-02)
+- **get-memo-by-id Edge Function 추가** - 공개 메모 상세 화면에서 메모 소유자의 프로필 정보 표시
+  - RLS 정책 우회를 위한 Edge Function 생성 및 배포
+  - Service Role Key를 사용하여 다른 유저의 `nickname`과 `picture_url` 조회
+  - `MemoRepository.getMemoById`에서 Edge Function 호출로 변경
+  - 디버깅 로그 추가
+
+### 🔒 Google Play 정책 준수 (2026-01-02)
+- **READ_MEDIA_IMAGES 권한 제거** - Google Play 사진 및 동영상 권한 정책 준수
+  - `AndroidManifest.xml`에서 `READ_MEDIA_IMAGES` 권한 제거
+  - Android Photo Picker 사용 (Android 13+ 자동 지원)
+  - Android 12 이하는 `READ_EXTERNAL_STORAGE` 사용 (`maxSdkVersion="32"`)
+
+### 📱 Android 15 지원 (2026-01-02)
+- **Edge-to-Edge 지원** - Android 15 이상에서 더 넓은 화면 표시
+  - `MainActivity.kt`에 Edge-to-Edge 활성화 코드 추가
+  - `WindowCompat.setDecorFitsSystemWindows()` 사용
+  - 지원 중단된 `Window.setStatusBarColor`, `setNavigationBarColor` API 대체
+  - `androidx.core:core-ktx:1.13.1` 의존성 추가
+
+#### 📝 수정된 파일
+- `supabase/functions/get-memo-by-id/index.ts` - 새 Edge Function 생성
+- `lib/features/memos/data/repositories/memo_repository.dart` - Edge Function 호출로 변경
+- `lib/features/memos/presentation/providers/memo_provider.dart` - 디버깅 로그 추가
+- `android/app/src/main/AndroidManifest.xml` - `READ_MEDIA_IMAGES` 권한 제거
+- `android/app/src/main/kotlin/com/whatif/milkyway/MainActivity.kt` - Edge-to-Edge 활성화
+- `android/app/build.gradle` - `androidx.core:core-ktx` 의존성 추가
 
 ---
 
