@@ -13,7 +13,7 @@ import '../../../home/presentation/providers/selected_book_provider.dart';
 import '../../../home/presentation/providers/home_loader_provider.dart';
 import '../../../memos/presentation/providers/memo_list_loader_provider.dart';
 import '../../../books/presentation/providers/bookshelf_loader_provider.dart';
-import 'dart:developer';
+import 'dart:developer' as developer;
 
 part 'auth_provider.g.dart';
 
@@ -48,7 +48,7 @@ class Auth extends _$Auth {
           await Future.delayed(const Duration(milliseconds: 100));
           final currentUser = await getCurrentUser();
           if (currentUser != null) {
-          state = AsyncValue.data(currentUser);
+            state = AsyncValue.data(currentUser);
           } else {
             state = const AsyncValue.data(null);
           }
@@ -72,7 +72,7 @@ class Auth extends _$Auth {
           await Future.delayed(const Duration(milliseconds: 100));
           final currentUser = await getCurrentUser();
           if (currentUser != null) {
-          state = AsyncValue.data(currentUser);
+            state = AsyncValue.data(currentUser);
           } else {
             state = const AsyncValue.data(null);
           }
@@ -86,10 +86,10 @@ class Auth extends _$Auth {
   Future<void> signOut() async {
     try {
       await _supabase.auth.signOut();
-      
+
       // 모든 데이터 provider 캐시 초기화 (다른 사용자 데이터가 표시되지 않도록)
       _clearAllDataProviders();
-      
+
       // authProvider 자체도 invalidate하여 완전히 초기화
       ref.invalidateSelf();
     } catch (e, st) {
@@ -102,20 +102,20 @@ class Auth extends _$Auth {
     // 책 관련 provider
     ref.invalidate(userBooksProvider);
     ref.invalidate(recentBooksProvider);
-    
+
     // 메모 관련 provider
     ref.invalidate(recentMemosProvider);
     ref.invalidate(homeRecentMemosProvider);
     ref.invalidate(allMemosProvider);
-    
+
     // 선택된 책 초기화
     ref.read(selectedBookIdProvider.notifier).state = null;
-    
+
     // 로더 provider들 초기화
     ref.invalidate(homeLoaderProvider);
     ref.invalidate(memoListLoaderProvider);
     ref.invalidate(bookshelfLoaderProvider);
-    
+
     // Family provider들은 사용자가 접근할 때 자동으로 새로 로드됨
     // (bookDetailProvider, memoProvider, bookMemosProvider, paginatedMemosProvider 등)
   }
@@ -124,7 +124,7 @@ class Auth extends _$Auth {
     try {
       // 세션 갱신 시도 (만료되기 전에 자동 갱신)
       await _refreshSessionIfNeeded();
-      
+
       final session = _supabase.auth.currentSession;
       if (session?.user == null) return null;
 
@@ -138,7 +138,7 @@ class Auth extends _$Auth {
 
       return User.fromJson(response);
     } catch (e) {
-      log('Error getting current user: $e');
+      developer.log('Error getting current user: $e');
       return null;
     }
   }
@@ -162,13 +162,13 @@ class Auth extends _$Auth {
 
         // 만료되기 5분 전이면 갱신 시도
         if (timeUntilExpiry.inMinutes < 5) {
-          log('세션 갱신 시도 (만료까지 ${timeUntilExpiry.inMinutes}분 남음)');
+          developer.log('세션 갱신 시도 (만료까지 ${timeUntilExpiry.inMinutes}분 남음)');
           await _supabase.auth.refreshSession();
-          log('세션 갱신 완료');
+          developer.log('세션 갱신 완료');
         }
       }
     } catch (e) {
-      log('세션 갱신 실패: $e');
+      developer.log('세션 갱신 실패: $e');
       // 세션 갱신 실패는 무시 (다음 요청 시 다시 시도)
     }
   }
@@ -201,30 +201,32 @@ class Auth extends _$Auth {
           'email': user.email,
           'updated_at': DateTime.now().toIso8601String(),
         };
-        
+
         // nickname이 DB에 없거나 null인 경우에만 Google/Apple에서 받은 값으로 설정
-        if (existingUser['nickname'] == null || existingUser['nickname'].toString().isEmpty) {
+        if (existingUser['nickname'] == null ||
+            existingUser['nickname'].toString().isEmpty) {
           updates['nickname'] = user.nickname;
         }
-        
+
         // picture_url이 DB에 없거나 null인 경우에만 Google/Apple에서 받은 값으로 설정
-        if (existingUser['picture_url'] == null || existingUser['picture_url'].toString().isEmpty) {
+        if (existingUser['picture_url'] == null ||
+            existingUser['picture_url'].toString().isEmpty) {
           updates['picture_url'] = user.pictureUrl;
         }
-        
+
         await _supabase.from('users').update(updates).eq('id', user.id);
       }
     } catch (e) {
-      log('Error handling user sign in: $e');
+      developer.log('Error handling user sign in: $e');
       rethrow;
     }
   }
 
   /// 닉네임 중복 체크
-  /// 
+  ///
   /// [nickname] 체크할 닉네임
   /// Returns true if nickname is available (not duplicate), false otherwise
-  /// 
+  ///
   /// RLS 정책으로 인해 다른 사용자의 닉네임을 직접 조회할 수 없으므로
   /// Supabase Edge Function을 사용하여 중복 체크를 수행합니다.
   Future<bool> checkNicknameAvailability(String nickname) async {
@@ -239,15 +241,12 @@ class Auth extends _$Auth {
       // Edge Function을 사용하여 닉네임 중복 체크 (RLS 정책 우회)
       final response = await _supabase.functions.invoke(
         'check-nickname',
-        body: {
-          'nickname': nickname,
-          'user_id': currentUser?.id,
-        },
+        body: {'nickname': nickname, 'user_id': currentUser?.id},
       );
 
       if (response.status != 200) {
         final errorData = response.data;
-        log('닉네임 중복 체크 실패: ${errorData ?? '알 수 없는 오류'}');
+        developer.log('닉네임 중복 체크 실패: ${errorData ?? '알 수 없는 오류'}');
         // 에러 발생 시 안전하게 false 반환 (중복으로 간주)
         return false;
       }
@@ -255,16 +254,13 @@ class Auth extends _$Auth {
       final data = response.data as Map<String, dynamic>?;
       return data?['available'] == true;
     } catch (e) {
-      log('닉네임 중복 체크 실패: $e');
+      developer.log('닉네임 중복 체크 실패: $e');
       // 에러 발생 시 안전하게 false 반환 (중복으로 간주)
       return false;
     }
   }
 
-  Future<void> updateProfile({
-    String? nickname,
-    String? pictureUrl,
-  }) async {
+  Future<void> updateProfile({String? nickname, String? pictureUrl}) async {
     try {
       final currentUser = await getCurrentUser();
       if (currentUser == null) return;
@@ -285,7 +281,7 @@ class Auth extends _$Auth {
       await Future.delayed(const Duration(milliseconds: 100));
       final updatedUser = await getCurrentUser();
       if (updatedUser != null) {
-      state = AsyncValue.data(updatedUser);
+        state = AsyncValue.data(updatedUser);
       }
 
       // 프로필 업데이트 시 메모 관련 provider들 무효화하여 최신 프로필 정보 반영
@@ -314,7 +310,7 @@ class Auth extends _$Auth {
         'delete-user',
         body: {'user_id': userId},
       );
-      
+
       if (response.status != 200) {
         final errorData = response.data;
         throw Exception('계정 삭제 실패: ${errorData ?? '알 수 없는 오류'}');
@@ -322,21 +318,21 @@ class Auth extends _$Auth {
 
       // 로그아웃 (세션 종료)
       await _supabase.auth.signOut();
-      
+
       // 모든 데이터 provider 캐시 초기화
       _clearAllDataProviders();
-      
+
       // authProvider 자체도 invalidate하여 완전히 초기화
       ref.invalidateSelf();
     } catch (e, st) {
-      log('계정 삭제 실패: $e');
+      developer.log('계정 삭제 실패: $e');
       state = AsyncValue.error(e, st);
       rethrow;
     }
   }
 
   bool get isSignedIn => _supabase.auth.currentUser != null;
-  
+
   String? get currentUserId => _supabase.auth.currentUser?.id;
 
   Future<void> checkAppVersion() async {
@@ -354,16 +350,19 @@ class Auth extends _$Auth {
       final currentUser = await getCurrentUser();
       if (currentUser == null) return;
 
-      await _supabase.from('users').update({
+      await _supabase
+          .from('users')
+          .update({
             'onboarding_completed': completed,
             'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', currentUser.id);
+          })
+          .eq('id', currentUser.id);
 
       // 상태 새로고침
       final updatedUser = await getCurrentUser();
       state = AsyncValue.data(updatedUser);
     } catch (e, st) {
-      log('Error updating onboarding status: $e');
+      developer.log('Error updating onboarding status: $e');
       state = AsyncValue.error(e, st);
     }
   }

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/notification_permission_dialog.dart';
 import 'dart:io' show Platform;
 import '../widgets/auth_background_layout.dart';
 
@@ -27,21 +30,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       duration: const Duration(milliseconds: 800),
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+      ),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+          ),
+        );
 
     // 애니메이션 시작
     _animationController.forward();
@@ -95,8 +97,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     ref.listen(authProvider, (previous, next) async {
       if (next.hasValue && next.value != null) {
-        final onboardingCompleted =
-            await ref.read(authProvider.notifier).checkOnboardingStatus();
+        // 로그인 성공 후 알림 권한 확인 및 요청
+        if (previous?.value == null && next.value != null) {
+          // 이전에 로그인하지 않았고 지금 로그인한 경우
+          await _checkAndShowNotificationPermissionDialog(context);
+        }
+
+        final onboardingCompleted = await ref
+            .read(authProvider.notifier)
+            .checkOnboardingStatus();
         if (context.mounted) {
           if (onboardingCompleted) {
             context.goNamed(AppRoutes.homeName);
@@ -164,7 +173,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ? const Center(
                           child: CircularProgressIndicator(
                             color: Color(0xFFECECEC),
-                          ))
+                          ),
+                        )
                       : ElevatedButton(
                           onPressed: () => ref
                               .read(authProvider.notifier)
@@ -206,5 +216,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ),
       ],
     );
+  }
+
+  /// 알림 권한 확인 및 다이얼로그 표시
+  Future<void> _checkAndShowNotificationPermissionDialog(
+    BuildContext context,
+  ) async {
+    try {
+      final notificationService = NotificationService();
+      final settings = await notificationService.getNotificationSettings();
+
+      // 권한이 결정되지 않은 경우에만 다이얼로그 표시
+      if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        if (context.mounted) {
+          await NotificationPermissionDialog.show(context);
+        }
+      } else if (settings.authorizationStatus ==
+              AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        // 권한이 있으면 FCM 토큰 등록
+        await notificationService.registerToken();
+      }
+    } catch (e) {
+      // 알림 권한 확인 실패는 무시
+    }
   }
 }

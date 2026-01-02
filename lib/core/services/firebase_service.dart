@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../../firebase_options.dart';
+import 'notification_service.dart';
 
 class FirebaseService {
   static FirebaseAnalytics? _analytics;
@@ -25,6 +26,17 @@ class FirebaseService {
       // 시뮬레이터나 네트워크 불안정 환경에서 에러 로그 감소
       if (_analytics != null) {
         await _analytics!.setAnalyticsCollectionEnabled(true);
+      }
+
+      // NotificationService 초기화
+      try {
+        final notificationService = NotificationService();
+        await notificationService.createNotificationChannel();
+        await notificationService.initialize();
+        print('✅ NotificationService 초기화 완료');
+      } catch (e) {
+        print('⚠️ NotificationService 초기화 실패 (계속 진행): $e');
+        // NotificationService가 없어도 앱은 계속 실행되도록 함
       }
     } catch (e) {
       print('⚠️ Firebase 초기화 실패 (계속 진행): $e');

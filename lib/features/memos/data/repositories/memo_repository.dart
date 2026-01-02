@@ -228,7 +228,7 @@ class MemoRepository {
     MemoVisibility visibility = MemoVisibility.private,
   }) async {
     log('Creating memo with imageUrl: $imageUrl, visibility: ${visibility.value}');
-    await _client.from('memos').insert({
+    final response = await _client.from('memos').insert({
       'book_id': bookId,
       'user_id': _client.auth.currentUser!.id,
       'content': content,
@@ -237,7 +237,38 @@ class MemoRepository {
       'visibility': visibility.value,
       'created_at': DateTime.now().toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
-    });
+    }).select('id').single();
+
+    final memoId = response['id'] as String;
+    final currentUserId = _client.auth.currentUser!.id;
+
+    // 공개 메모인 경우 알림 전송
+    if (visibility == MemoVisibility.public) {
+      try {
+        // 메모 작성자의 닉네임 조회
+        final userResponse = await _client
+            .from('users')
+            .select('nickname')
+            .eq('id', currentUserId)
+            .single();
+        final memoAuthorNickname = userResponse['nickname'] as String? ?? '사용자';
+
+        await _client.functions.invoke(
+          'notify-new-public-memo',
+          body: {
+            'book_id': bookId,
+            'memo_id': memoId,
+            'memo_content': content,
+            'memo_author_nickname': memoAuthorNickname,
+            'memo_author_id': currentUserId,
+          },
+        );
+        log('공개 메모 알림 전송 요청 완료');
+      } catch (e) {
+        log('알림 전송 실패 (무시): $e');
+        // 알림 실패해도 메모 생성은 성공
+      }
+    }
   }
 
   Future<void> updateMemo({

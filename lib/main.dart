@@ -8,6 +8,8 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/config/env_config.dart';
 import 'core/services/firebase_service.dart';
+import 'core/services/notification_service.dart';
+import 'core/router/app_routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -255,6 +257,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 알림 라우팅 설정 (router가 준비된 후)
+    final notificationService = NotificationService();
+    notificationService.onNotificationTapped = (data) {
+      // memo_id가 있으면 메모 상세 화면으로 이동
+      if (data.containsKey('memo_id')) {
+        final memoId = data['memo_id'] as String;
+        router.pushNamed(
+          AppRoutes.memoDetailName,
+          pathParameters: {'id': memoId},
+        );
+      }
+    };
+
     return MaterialApp.router(
       title: 'milkyway',
       theme: AppTheme.lightTheme,

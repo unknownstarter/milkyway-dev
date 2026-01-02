@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../widgets/feedback_modal.dart';
+import '../widgets/notification_settings_tile.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -198,6 +199,8 @@ class _ProfileContent extends StatelessWidget {
             ),
             child: Column(
               children: [
+                const NotificationSettingsTile(),
+                Divider(color: Colors.grey.shade800, height: 1),
                 ListTile(
                   leading: const Icon(
                     Icons.feedback_outlined,
