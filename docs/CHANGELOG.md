@@ -2,9 +2,46 @@
 
 ## 📋 버전 관리
 
-**현재 버전:** 0.1.0+15  
+**현재 버전:** 0.1.0+16  
 **최종 업데이트:** 2026-01-02  
 **개발 상태:** 개발 중
+
+---
+
+## 🚀 [0.1.0+16] - 2026-01-02
+
+### 🛡️ 메모 신고 기능 구현 (Google Play Store 가족 정책 준수)
+- **신고 기능 추가** - 공개 메모에 대한 신고 기능 구현
+  - 공개 메모 카드 우측 상단에 케밥 메뉴 추가 (공개 메모이고 다른 유저의 메모일 때만)
+  - 신고 바텀시트: 7가지 신고 사유 선택 (스팸, 부적절한 콘텐츠, 혐오 발언, 성적 콘텐츠, 폭력적 콘텐츠, 저작권 침해, 기타)
+  - 신고 완료 후 즉시 메모 리스트 리로딩 및 필터링
+  - 신고한 메모는 해당 사용자에게만 안보이게 처리 (메모는 삭제되지 않음)
+
+- **데이터베이스 마이그레이션**:
+  - `memo_reports` 테이블 생성: 신고 정보 저장
+  - `user_hidden_memos` 테이블 생성: 신고한 사용자에게 메모 숨기기
+  - `report_reason_type` enum 생성: 신고 사유 타입 정의
+  - RLS 정책 설정: 사용자는 자신이 신고한 내용만 조회 가능
+
+- **필터링 로직**:
+  - `hiddenMemoIdsProvider`를 watch하여 자동 필터링
+  - 신고한 메모는 공개 메모 목록에서 자동으로 제외
+
+- **UI 개선**:
+  - 패딩 구조 수정: 이중 패딩 문제 해결, 원래 구조 유지
+  - 케밥 메뉴는 `Positioned`로 절대 위치 배치
+
+#### 📝 수정된 파일
+- `supabase/migrations/add_memo_reports_table.sql` - 신고 관련 테이블 생성
+- `lib/features/memos/domain/models/report_reason.dart` - 신고 사유 enum 모델
+- `lib/features/memos/data/repositories/memo_report_repository.dart` - 신고 Repository 구현
+- `lib/features/memos/presentation/providers/memo_report_provider.dart` - 신고 Provider 구현
+- `lib/features/memos/presentation/widgets/book_detail_memo_card.dart` - 케밥 메뉴 추가, 패딩 구조 수정
+- `lib/features/memos/presentation/widgets/report_memo_bottom_sheet.dart` - 신고 바텀시트 구현
+- `lib/features/memos/presentation/widgets/memo_list_view.dart` - 필터링 로직 추가
+- `docs/LESSONS_LEARNED.md` - 학습 내용 기록
+- `docs/CHANGELOG.md` - 변경 사항 기록
+- `docs/CODE_REVIEW_REPORT_FEATURE.md` - 코드 리뷰 결과
 
 ---
 

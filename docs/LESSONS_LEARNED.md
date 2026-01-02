@@ -10,6 +10,63 @@
 
 ---
 
+## 🎯 2026-01-02: 메모 신고 기능 구현 (Google Play Store 가족 정책 준수)
+
+### 문제 상황
+Google Play Store에서 앱이 거절되었습니다. 소셜 기능 관련 가족 정책 요구사항을 준수하지 않는다는 이유였습니다:
+- 아동 사용자가 자유 형식의 미디어나 정보를 교환할 수 있도록 허용하기 전에 안전 알림 제공하지 않음
+- 개인 정보 교환 시 성인 인증 요구하지 않음
+- 보호자가 소셜 기능을 관리할 수 있는 수단 제공하지 않음
+
+### 원인 분석
+- 공개 메모 기능이 있으나, 부적절한 콘텐츠를 신고할 수 있는 기능이 없었음
+- 사용자가 신고한 콘텐츠를 숨기는 기능이 없었음
+- Google Play Store의 가족 정책 요구사항을 충족하지 못함
+
+### 해결 과정
+1. **데이터베이스 마이그레이션**:
+   - `memo_reports` 테이블 생성: 신고 정보 저장 (memo_id, reporter_id, reason, description)
+   - `user_hidden_memos` 테이블 생성: 신고한 사용자에게 메모 숨기기
+   - `report_reason_type` enum 생성: 7가지 신고 사유 (스팸, 부적절한 콘텐츠, 혐오 발언, 성적 콘텐츠, 폭력적 콘텐츠, 저작권 침해, 기타)
+   - RLS 정책 설정: 사용자는 자신이 신고한 내용만 조회 가능
+
+2. **Repository 및 Provider 구현**:
+   - `MemoReportRepository`: 신고 생성, 숨긴 메모 ID 조회
+   - `hiddenMemoIdsProvider`: 사용자가 숨긴 메모 ID 목록 캐싱
+   - `reportMemoProvider`: 신고 처리 및 자동 리로딩
+
+3. **UI 구현**:
+   - 공개 메모 카드 우측 상단에 케밥 메뉴 추가 (공개 메모이고 다른 유저의 메모일 때만)
+   - 신고 바텀시트: 신고 사유 선택 및 제출
+   - 신고 완료 후 즉시 메모 리스트 리로딩 및 필터링
+
+4. **필터링 로직**:
+   - `memo_list_view.dart`에서 `hiddenMemoIdsProvider`를 watch하여 자동 필터링
+   - 신고한 메모는 해당 사용자에게만 안보이게 처리 (메모는 삭제되지 않음)
+
+5. **패딩 구조 수정**:
+   - 케밥 메뉴 추가 시 이중 패딩 문제 발생
+   - `BookDetailMemoCard`의 외부 패딩 제거, 원래 구조 유지
+   - 케밥 메뉴는 `Positioned`로 절대 위치 배치
+
+### 배운 점
+- **Google Play Store 정책 준수**: 소셜 기능이 있는 앱은 반드시 콘텐츠 신고 기능을 제공해야 함
+- **사용자 경험**: 신고 완료 후 즉시 리로딩하여 사용자가 신고한 콘텐츠가 사라지는 것을 확인할 수 있도록 함
+- **데이터 무결성**: 메모는 삭제되지 않고, 신고한 사용자에게만 숨김 처리하여 다른 사용자에게는 계속 보임
+- **RLS 정책 활용**: 사용자는 자신이 신고한 내용만 조회 가능하도록 RLS 정책 설정
+- **UI 일관성**: 패딩 구조를 원래대로 유지하여 기존 디자인과 일관성 유지
+
+### 실수
+- 초기에 `BookDetailMemoCard`에 패딩을 추가하여 이중 패딩 문제 발생
+- `memo_list_view.dart`의 패딩과 겹쳐 총 40px 패딩이 적용됨
+- 해결: 외부 패딩 제거, 원래 구조 유지
+
+### 참고 문서
+- [Google Play 가족 정책](https://support.google.com/googleplay/android-developer/answer/9888170)
+- [DEVELOPER_RULES.md](./DEVELOPER_RULES.md) - Clean Architecture 규칙
+
+---
+
 ## 🎯 2026-01-02: Push Notification 이미지 추가
 
 ### 문제 상황

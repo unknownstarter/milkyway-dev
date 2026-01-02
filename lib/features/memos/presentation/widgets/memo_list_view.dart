@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/memo_provider.dart';
+import '../providers/memo_report_provider.dart';
 import '../../domain/models/memo_filter.dart';
 import 'book_detail_memo_card.dart';
 import '../../../../core/presentation/widgets/pill_filter_button.dart';
@@ -72,13 +73,18 @@ class _MemoListViewState extends ConsumerState<MemoListView> {
         // 반응형: 화면 너비에서 양쪽 20px씩 제외한 카드 너비
         final cardWidth = constraints.maxWidth - 40;
         
+        // 신고한 메모 ID 목록 조회 (공개 메모 필터에서만 사용)
+        final hiddenMemoIdsAsync = _selectedFilter == MemoFilter.all
+            ? ref.watch(hiddenMemoIdsProvider)
+            : const AsyncValue.data(<String>{});
+
         return memosAsyncValue.when(
           data: (memos) {
-            // 필터링된 메모 (메모이제이션 적용)
-            // "모든 메모" 필터: 이미 공개 메모만 가져왔으므로 추가 필터링 불필요
-            // "내가 쓴 메모" 필터: bookMemosProvider가 이미 현재 사용자의 메모만 가져오므로
-            // 공개/비공개 구분 없이 모두 표시 (추가 필터링 불필요)
-            final filteredMemos = memos; // provider에서 이미 올바르게 필터링됨
+            // 신고한 메모 필터링
+            final hiddenMemoIds = hiddenMemoIdsAsync.value ?? <String>{};
+            final filteredMemos = memos
+                .where((memo) => !hiddenMemoIds.contains(memo.id))
+                .toList();
 
             return Column(
               mainAxisSize: MainAxisSize.min,
