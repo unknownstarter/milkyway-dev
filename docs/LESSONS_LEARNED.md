@@ -10,6 +10,50 @@
 
 ---
 
+## 🎯 2026-01-02: Push Notification 이미지 추가
+
+### 문제 상황
+Push Notification에 책 표지 이미지를 추가하여 사용자 경험을 개선하고 싶었으나, 현재 알림에는 텍스트만 표시되고 있었습니다.
+
+### 원인 분석
+- Edge Function에서 책 정보 조회 시 `title`만 조회하고 있었음
+- FCM v1 API의 이미지 필드가 설정되지 않았음
+- Android와 iOS에서 이미지 설정 방법이 다를 수 있음
+
+### 해결 과정
+1. **책 정보 조회 확장**:
+   - `notify-new-public-memo` Edge Function에서 `books` 테이블 조회 시 `cover_url` 필드 추가
+   - `select('title')` → `select('title, cover_url')`로 변경
+
+2. **FCM v1 API 이미지 필드 추가**:
+   - Android: `android.notification.image` 필드 사용
+   - iOS: `apns.fcmOptions.image` 필드 사용
+   - 이미지가 있을 때만 조건부로 추가하여 하위 호환성 유지
+
+3. **하위 호환성 보장**:
+   - 책 표지 이미지가 없을 경우 `null`로 처리
+   - 이미지 필드가 없으면 기존과 동일한 페이로드 전송
+   - 이전 버전 사용자에게 영향 없음
+
+### 배운 점
+- **FCM v1 API 이미지 지원**: Android와 iOS 모두에서 이미지를 지원하지만, 각각 다른 필드 경로를 사용해야 함
+  - Android: `message.android.notification.image`
+  - iOS: `message.apns.fcmOptions.image`
+- **조건부 필드 추가**: 이미지가 없을 때는 필드를 추가하지 않아야 하위 호환성 유지 가능
+- **Edge Function 배포**: Supabase MCP를 사용하여 Edge Function을 직접 배포할 수 있음
+- **하위 호환성 중요성**: 기존 사용자에게 영향을 주지 않으면서 새 기능을 추가하는 것이 중요
+
+### 실수
+- 초기에 이미지 필드를 항상 추가하려 했으나, `null` 값이 포함되면 FCM에서 오류가 발생할 수 있음
+- 조건부 추가로 해결
+
+### 참고 문서
+- [FCM v1 API 문서](https://firebase.google.com/docs/cloud-messaging/send-message)
+- [Android Notification 이미지](https://firebase.google.com/docs/cloud-messaging/android/send-image)
+- [iOS Notification 이미지](https://firebase.google.com/docs/cloud-messaging/ios/send-image)
+
+---
+
 ## 🎯 2026-01-02: Google Play 정책 준수 및 Android 15 지원
 
 ### 문제 상황

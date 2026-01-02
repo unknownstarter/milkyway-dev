@@ -10,6 +10,13 @@
 
 ## 🚀 [0.1.0+15] - 2026-01-02
 
+### 🔔 Push Notification 개선 (2026-01-02)
+- **책 표지 이미지 추가** - Push Notification에 책 표지 이미지 표시 기능 추가
+  - `notify-new-public-memo` Edge Function에서 `books.cover_url` 필드 조회 추가
+  - FCM v1 API를 사용하여 Android/iOS 모두에서 이미지 지원
+  - 책 표지 이미지가 없을 경우 기존과 동일하게 동작 (하위 호환)
+  - Edge Function 버전 3 → 4 업데이트 및 배포 완료
+
 ### 🎯 공개 메모 상세 화면 프로필 정보 표시 (2026-01-02)
 - **get-memo-by-id Edge Function 추가** - 공개 메모 상세 화면에서 메모 소유자의 프로필 정보 표시
   - RLS 정책 우회를 위한 Edge Function 생성 및 배포
@@ -31,12 +38,15 @@
   - `androidx.core:core-ktx:1.13.1` 의존성 추가
 
 #### 📝 수정된 파일
+- `supabase/functions/notify-new-public-memo/index.ts` - 책 표지 이미지 추가 (버전 4)
 - `supabase/functions/get-memo-by-id/index.ts` - 새 Edge Function 생성
 - `lib/features/memos/data/repositories/memo_repository.dart` - Edge Function 호출로 변경
 - `lib/features/memos/presentation/providers/memo_provider.dart` - 디버깅 로그 추가
 - `android/app/src/main/AndroidManifest.xml` - `READ_MEDIA_IMAGES` 권한 제거
 - `android/app/src/main/kotlin/com/whatif/milkyway/MainActivity.kt` - Edge-to-Edge 활성화
 - `android/app/build.gradle` - `androidx.core:core-ktx` 의존성 추가
+- `docs/CHANGELOG.md` - 변경 사항 기록
+- `docs/LESSONS_LEARNED.md` - 학습 내용 기록
 
 ---
 
