@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- READ_MEDIA_IMAGES 권한 제거: Android Photo Picker 사용으로 권한 불필요 -->
     <application
         android:label="milkyway"
         android:name="${applicationName}"
