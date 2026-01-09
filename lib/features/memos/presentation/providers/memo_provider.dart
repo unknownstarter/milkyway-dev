@@ -11,6 +11,40 @@ final memoRepositoryProvider = Provider((ref) {
   return MemoRepository(Supabase.instance.client);
 });
 
+/// 메모 변경 후 관련 provider들 무효화 (중앙화된 함수)
+/// 
+/// 메모 생성/수정/삭제 후 일관된 캐시 무효화를 보장합니다.
+/// 
+/// [ref] Riverpod Ref
+/// [bookId] 책 ID
+/// [memoId] 메모 ID (updateMemo, deleteMemo에서만 필요)
+/// [isPublic] 공개 메모인지 여부 (공개 메모 provider 무효화 여부 결정)
+void invalidateMemoProviders(
+  Ref ref,
+  String bookId, {
+  String? memoId,
+  bool isPublic = false,
+}) {
+  // 공개 메모인 경우에만 공개 메모 관련 provider 무효화
+  if (isPublic) {
+    ResponseCache().invalidate('get-public-book-memos', bookId: bookId);
+    ref.invalidate(paginatedPublicBookMemosProvider(bookId));
+  }
+
+  // 항상 무효화해야 하는 provider들
+  ref.invalidate(bookMemosProvider(bookId));
+  ref.invalidate(recentMemosProvider);
+  ref.invalidate(homeRecentMemosProvider);
+  ref.invalidate(allMemosProvider);
+  ref.invalidate(paginatedMemosProvider(bookId));
+  ref.invalidate(paginatedMemosProvider(null));
+
+  // 메모 상세 화면 갱신 (updateMemo, deleteMemo에서만 필요)
+  if (memoId != null) {
+    ref.invalidate(memoProvider(memoId));
+  }
+}
+
 final memoProvider = FutureProvider.family<Memo?, String>((ref, memoId) async {
   try {
     log('memoProvider 호출: $memoId');
@@ -158,17 +192,8 @@ final createMemoProvider =
       page: params.page,
     );
 
-    // 캐시 무효화 (특정 bookId만 무효화하여 효율성 향상)
-    ResponseCache().invalidate('get-public-book-memos', bookId: params.bookId);
-
-    // 관련된 프로바이더들 새로고침
-    ref.invalidate(bookMemosProvider(params.bookId));
-    ref.invalidate(recentMemosProvider);
-    ref.invalidate(homeRecentMemosProvider);
-    ref.invalidate(allMemosProvider);
-    ref.invalidate(paginatedMemosProvider(params.bookId));
-    ref.invalidate(paginatedMemosProvider(null));
-    ref.invalidate(paginatedPublicBookMemosProvider(params.bookId));
+    // 중앙화된 무효화 함수 사용 (private 메모로 가정)
+    invalidateMemoProviders(ref, params.bookId, isPublic: false);
   },
 );
 
@@ -210,18 +235,14 @@ final updateMemoProvider = FutureProvider.family<
     imageUrl: params.imageUrl,
   );
 
-  // 캐시 무효화 (특정 bookId만 무효화하여 효율성 향상)
-  ResponseCache().invalidate('get-public-book-memos', bookId: params.bookId);
-
-  // 관련된 프로바이더들 새로고침
-  ref.invalidate(memoProvider(params.memoId)); // 메모 상세 화면 갱신
-  ref.invalidate(bookMemosProvider(params.bookId));
-  ref.invalidate(recentMemosProvider);
-  ref.invalidate(homeRecentMemosProvider);
-  ref.invalidate(allMemosProvider);
-  ref.invalidate(paginatedMemosProvider(params.bookId));
-  ref.invalidate(paginatedMemosProvider(null));
-  ref.invalidate(paginatedPublicBookMemosProvider(params.bookId));
+  // updateMemoProvider는 visibility 정보가 없으므로 안전하게 모두 무효화
+  // (공개 메모일 수 있으므로 isPublic: true로 설정)
+  invalidateMemoProviders(
+    ref,
+    params.bookId,
+    memoId: params.memoId,
+    isPublic: true, // 안전을 위해 공개 메모로 가정
+  );
 });
 
 final deleteMemoProvider =
@@ -230,18 +251,13 @@ final deleteMemoProvider =
     final repository = ref.watch(memoRepositoryProvider);
     await repository.deleteMemo(params.memoId);
 
-    // 캐시 무효화 (특정 bookId만 무효화하여 효율성 향상)
-    ResponseCache().invalidate('get-public-book-memos', bookId: params.bookId);
-
-    // 모든 관련 provider 무효화하여 UI 업데이트
-    ref.invalidate(memoProvider(params.memoId)); // 메모 상세 화면 갱신 (null 반환하여 화면 닫기)
-    ref.invalidate(paginatedMemosProvider(params.bookId));
-    ref.invalidate(paginatedMemosProvider(null)); // 전체 메모 리스트도 무효화
-    ref.invalidate(bookMemosProvider(params.bookId));
-    ref.invalidate(recentMemosProvider);
-    ref.invalidate(homeRecentMemosProvider);
-    ref.invalidate(allMemosProvider);
-    ref.invalidate(paginatedPublicBookMemosProvider(params.bookId));
+    // deleteMemoProvider는 삭제된 메모가 공개였을 수 있으므로 모두 무효화
+    invalidateMemoProviders(
+      ref,
+      params.bookId,
+      memoId: params.memoId,
+      isPublic: true, // 안전을 위해 공개 메모로 가정
+    );
   },
 );
 

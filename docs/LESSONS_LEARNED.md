@@ -4,9 +4,103 @@
 
 이 문서는 Milkyway 앱 개발 과정에서 배운 교훈과 실수를 기록하여 향후 유사한 문제를 방지하고, 더 나은 개발을 위한 가이드로 활용합니다.
 
-**최종 업데이트:** 2026-01-02  
+**최종 업데이트:** 2026-01-09  
 **작성자:** AI Assistant  
 **검토자:** 개발팀
+
+---
+
+## 🎯 2026-01-09: 캐시 무효화 및 클린 아키텍처 개선
+
+### 문제 상황
+1. **책 재등록 시 캐시 문제**: 신규 회원이 책을 저장 → 삭제 → 재등록 시 "Cannot coerce the result to a single JSON object (PGRST116)" 에러 발생
+2. **메모 작성 후 캐시 문제**: 책 상세에서 메모 작성 시 "나의 메모"에는 표시되지만 "모든 메모"에는 표시되지 않음
+3. **코드 중복 및 아키텍처 문제**: 여러 provider에서 동일한 무효화 로직 반복, Presentation 레이어 간 강한 결합
+
+### 원인 분석
+1. **책 재등록 문제**:
+   - 책 삭제 후 재등록 시 `bookDetailProvider`가 무효화되지 않아 이전 캐시 사용
+   - `user_books` 연결 생성 전에 책 상세 조회 시도 (타이밍 이슈)
+   - 고정 딜레이 재시도로 인한 비효율성
+
+2. **메모 작성 문제**:
+   - `memoFormProvider`에서 `paginatedPublicBookMemosProvider` 무효화 누락
+   - `ResponseCache` 무효화 누락
+
+3. **아키텍처 문제**:
+   - 4개 메서드에서 동일한 무효화 로직 반복 (약 160줄 중복)
+   - `memo_form_provider`가 다른 provider들을 직접 invalidate (강한 결합)
+   - `ResponseCache`를 Presentation 레이어에서 직접 사용
+
+### 해결 과정
+1. **책 상세 Provider 개선**:
+   - Exponential backoff 적용: 300ms → 600ms → 1200ms (최대 2초)
+   - 에러 처리 범위 확대: PGRST116 외에도 PGRST301, "0 rows", "not found" 등
+   - 책 등록 시 `bookDetailProvider` 무효화 추가
+
+2. **메모 작성 캐시 무효화 수정**:
+   - `memoFormProvider`의 모든 메서드에 `paginatedPublicBookMemosProvider` 무효화 추가
+   - `ResponseCache` 무효화 추가
+   - visibility에 따른 조건부 무효화 적용 (private 메모는 공개 메모 provider 무효화 불필요)
+
+3. **코드 리팩토링 및 아키텍처 개선**:
+   - 중앙화된 무효화 함수 `invalidateMemoProviders` 제공 (`memo_provider.dart`)
+   - `memo_form_provider`가 중앙화된 함수 사용 (중복 제거)
+   - `createMemoProvider`, `updateMemoProvider`, `deleteMemoProvider`도 중앙화된 함수 사용
+   - `ResponseCache` 직접 사용 제거 (Presentation 레이어에서)
+
+### 배운 점
+1. **Exponential Backoff의 중요성**:
+   - 고정 딜레이보다 exponential backoff가 더 효율적
+   - 타이밍 이슈 해결에 효과적
+   - 프로젝트에 `RetryHelper`가 있으면 활용 고려
+
+2. **캐시 무효화의 완전성**:
+   - 데이터 변경 시 관련된 모든 provider를 무효화해야 함
+   - 특히 페이지네이션 provider (`paginatedPublicBookMemosProvider`) 무효화 누락 주의
+   - `ResponseCache`와 provider 무효화를 함께 수행해야 함
+
+3. **조건부 무효화의 효율성**:
+   - Private 메모 생성 시 공개 메모 provider 무효화 불필요
+   - visibility 정보를 활용한 선택적 무효화로 성능 개선
+
+4. **중앙화된 함수의 가치**:
+   - 중복 코드 제거 (160줄 → 30줄)
+   - 일관성 보장 (모든 메모 변경 시 동일한 무효화 로직)
+   - 유지보수성 향상 (한 곳에서 수정)
+   - 클린 아키텍처 개선 (의존성 감소)
+
+5. **클린 아키텍처 원칙**:
+   - Presentation 레이어 간 직접 의존 최소화
+   - Core 유틸리티는 가능한 한 한 곳에서만 사용
+   - 중앙화된 함수로 결합도 감소
+
+### 실수 및 개선 사항
+1. **초기 구현 시 누락**:
+   - 책 재등록 시 `bookDetailProvider` 무효화 누락
+   - 메모 작성 시 `paginatedPublicBookMemosProvider` 무효화 누락
+   - → **체크리스트 필요**: 데이터 변경 시 관련 provider 모두 무효화 확인
+
+2. **코드 중복 발견 지연**:
+   - 4개 메서드에서 동일한 로직 반복했으나 리팩토링 지연
+   - → **코드 리뷰 시 중복 코드 체크 필수**
+
+3. **아키텍처 개선 지연**:
+   - Presentation 레이어 간 직접 의존을 초기에 발견하지 못함
+   - → **의존성 분석 도구 활용 고려**
+
+### 향후 개선 방안
+1. **자동화된 무효화 패턴**:
+   - 데이터 변경 시 관련 provider를 자동으로 무효화하는 패턴 고려
+   - 이벤트 기반 아키텍처 도입 검토
+
+2. **테스트 커버리지**:
+   - 캐시 무효화 로직에 대한 단위 테스트 추가
+   - 통합 테스트로 전체 플로우 검증
+
+3. **모니터링**:
+   - 캐시 무효화 누락을 감지하는 로깅 추가
+   - 개발 환경에서 경고 표시
 
 ---
 

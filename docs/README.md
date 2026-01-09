@@ -244,10 +244,38 @@ flutter test test/widget_test.dart
 
 ## 📚 문서
 
-- [PRD (Product Requirements Document)](./PRD.md)
-- [개발자 규칙](./DEVELOPER_RULES.md)
-- [변경 히스토리](./CHANGELOG.md)
-- [작업 관리](./TASK_MASTER.md)
+### 핵심 문서 (루트)
+- [PRD (Product Requirements Document)](./PRD.md) - 제품 요구사항 문서
+- [개발자 규칙](./DEVELOPER_RULES.md) - 개발 가이드라인 및 규칙
+- [레슨런](./LESSONS_LEARNED.md) - 학습 내용 및 교훈
+- [변경 히스토리](./CHANGELOG.md) - 버전별 변경 사항
+- [작업 관리](./TASK_MASTER.md) - 작업 현황 및 진행 상황
+
+### 문서 구조
+```
+docs/
+├── 핵심 문서 (루트)
+│   ├── README.md
+│   ├── PRD.md
+│   ├── DEVELOPER_RULES.md
+│   ├── LESSONS_LEARNED.md
+│   ├── CHANGELOG.md
+│   └── TASK_MASTER.md
+│
+├── code-reviews/          # 코드 리뷰 문서
+├── guides/                # 설정 가이드
+│   ├── notifications/     # 푸시 알림 설정
+│   ├── deployment/        # 배포 가이드
+│   └── configuration/     # 기타 설정
+├── technical/             # 기술 문서
+├── refactoring/           # 리팩토링 계획
+└── project/               # 프로젝트 관련 문서
+```
+
+### 주요 가이드
+- **푸시 알림 설정**: [guides/notifications/](./guides/notifications/)
+- **배포 가이드**: [guides/deployment/](./guides/deployment/)
+- **기술 문서**: [technical/](./technical/)
 
 ## 🤝 기여하기
 

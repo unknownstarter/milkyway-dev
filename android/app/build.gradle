@@ -21,6 +21,7 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
+        coreLibraryDesugaringEnabled true // flutter_local_notifications 요구사항
     }
 
     kotlinOptions {
@@ -77,5 +78,6 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
     // AndroidX Core for WindowCompat (Edge-to-Edge support)
     implementation 'androidx.core:core-ktx:1.13.1'
-    // ...
+    // Core library desugaring (flutter_local_notifications 요구사항)
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }

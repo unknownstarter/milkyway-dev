@@ -65,8 +65,16 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
         );
       }
 
-      ref.invalidate(bookMemosProvider(bookId));
-      ref.invalidate(recentMemosProvider);
+      // saveMemo는 visibility 정보가 없으므로, 기존 메모가 있으면 그 visibility 확인
+      // 없으면 private로 가정 (기본값)
+      final wasPublic = initialMemo != null &&
+          initialMemo!.visibility == MemoVisibility.public;
+      _invalidateMemoProviders(
+        bookId,
+        memoId: initialMemo?.id,
+        isPublic: wasPublic,
+      );
+
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
@@ -82,9 +90,17 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
 
     try {
-      await _repository.deleteMemo(initialMemo!.id);
-      ref.invalidate(bookMemosProvider(bookId));
-      ref.invalidate(recentMemosProvider);
+      final memoToDelete = initialMemo!;
+      await _repository.deleteMemo(memoToDelete.id);
+
+      // 삭제된 메모가 공개였을 수 있으므로 공개 메모 provider도 무효화
+      final wasPublic = memoToDelete.visibility == MemoVisibility.public;
+      _invalidateMemoProviders(
+        bookId,
+        memoId: memoToDelete.id,
+        isPublic: wasPublic,
+      );
+
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
@@ -112,8 +128,13 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
         imageUrl: imageUrl,
         visibility: visibility,
       );
-      ref.invalidate(bookMemosProvider(bookId));
-      ref.invalidate(recentMemosProvider);
+
+      // visibility에 따라 조건부 무효화
+      _invalidateMemoProviders(
+        bookId,
+        isPublic: visibility == MemoVisibility.public,
+      );
+
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
@@ -141,20 +162,35 @@ class MemoFormController extends StateNotifier<AsyncValue<void>> {
         imageUrl: imageUrl,
         visibility: visibility,
       );
-      // 메모 상세 화면 갱신을 위해 memoProvider 무효화
-      ref.invalidate(memoProvider(memoId));
-      ref.invalidate(bookMemosProvider(bookId));
-      ref.invalidate(recentMemosProvider);
-      ref.invalidate(homeRecentMemosProvider);
-      ref.invalidate(allMemosProvider);
-      ref.invalidate(paginatedMemosProvider(bookId));
-      ref.invalidate(paginatedMemosProvider(null));
+
+      // visibility 변경 여부 확인 (기존 메모의 visibility와 비교)
+      // visibility가 null이면 변경되지 않은 것으로 간주
+      final isPublic = visibility == MemoVisibility.public ||
+          (visibility == null && initialMemo?.visibility == MemoVisibility.public);
+      
+      _invalidateMemoProviders(
+        bookId,
+        memoId: memoId,
+        isPublic: isPublic,
+      );
+
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       return false;
     }
+  }
+
+  /// 메모 변경 후 관련 provider들 무효화
+  /// 
+  /// 중앙화된 무효화 함수를 사용하여 일관성 보장
+  void _invalidateMemoProviders(
+    String bookId, {
+    String? memoId,
+    bool isPublic = false,
+  }) {
+    invalidateMemoProviders(ref, bookId, memoId: memoId, isPublic: isPublic);
   }
 
   @override
